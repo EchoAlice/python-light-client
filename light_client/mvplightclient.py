@@ -14,4 +14,5 @@ if __name__ == "__main__":
   # Query API for current block header
   response = requests.get("https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/headers")
   block_header = response.json()
-  print(block_header)
+  beacon_block_header_container = block_header['data'][0]['header']['message']
+  print(beacon_block_header_container)
