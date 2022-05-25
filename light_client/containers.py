@@ -1,4 +1,10 @@
 # Containers
+class BeaconBlockHeader(Container):
+    slot: Slot
+    parent_root: Root
+    state_root: Root
+    body_root: Root
+
 class LightClientUpdate(Container):
   # The beacon block header that is attested to by the sync committee
   attested_header: BeaconBlockHeader
