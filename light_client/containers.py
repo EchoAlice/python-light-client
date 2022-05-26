@@ -1,3 +1,4 @@
+from typing import Container
 from numpy import uint64
 # Containers - A Container class can be described as a special component that can hold the gathering of the components.
 #              A component is an identifiable part of a larger program or construction. Seperation of concerns
@@ -9,27 +10,21 @@ CommitteeIndex = uint64
 ValidatorIndex	= uint64	
 Gwei =	uint64	
 # How do i turn this data type into something I can use in python?
-Root =	Bytes32	
-Hash32	= Bytes32
-Version	= Bytes4	
-DomainType = Bytes4	
-ForkDigest = Bytes4	
-Domain = Bytes32	
-BLSPubkey =	Bytes48
-BLSSignature = Bytes96
+# Root =	Bytes32   <--- Should be implemented like this	
+Root = bytes	
+# Hash32	= Bytes32
+# Version	= Bytes4	
+# DomainType = Bytes4	
+# ForkDigest = Bytes4	
+# Domain = Bytes32	
+# BLSPubkey =	Bytes48
+# BLSSignature = Bytes96
 
 class BeaconBlockHeader(Container):
     slot: Slot
     parent_root: Root
     state_root: Root
     body_root: Root
-
-class LightClientSnapshot(Container):
-    # Beacon block header
-    header: BeaconBlockHeader
-    # Sync committees corresponding to the header
-    current_sync_committee: SyncCommittee
-    next_sync_committee: SyncCommittee
 
 class LightClientUpdate(Container):
   # The beacon block header that is attested to by the sync committee
