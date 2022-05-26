@@ -15,13 +15,10 @@ def callsAPI(url):
   json_object = response.json() 
   return json_object
 
-def getsCurrentBlockHeader(url):
-  return callsAPI(url)
-
 if __name__ == "__main__":
   # Initialization:
   block_header_url =  "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/headers"
-  block_header = getsCurrentBlockHeader(block_header_url)
+  block_header = callsAPI(block_header_url)
   beacon_block_header_container = block_header['data'][0]['header']['message']
   print(beacon_block_header_container) 
   
