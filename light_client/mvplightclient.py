@@ -1,13 +1,7 @@
 import requests
-import json
+import remerkleable
 
 # from containers import BeaconBlockHeader
-# from containers import LightClientUpdate
-# from containers import LightClientStore
-# from helperfunctions import is_finality_update
-# from helperfunctions import get_subtree_index
-# from helperfunctions import get_active_header
-# from helperfunctions import get_safety_threshold
 
 #  MVP Light Client:  Track latest state/block root
 def callsAPI(url):
@@ -49,7 +43,7 @@ if __name__ == "__main__":
   #     in the sync committee to directly authenticate signatures of more recent blocks.
 
 
-  # A first milestone for a light client implementation is to simply HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
+  # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 
   # Summary of what light client needs to do 
   # block_header = getBeaconBlockHeader()
@@ -58,24 +52,22 @@ if __name__ == "__main__":
   # if update_light_client() == true:
   #   updateLightClient(LightClientStore)
 
+  # Step 1:  Get current sync committee
+  # Full node provides a trusted checkpoint root.
 
-  # Gets finalized checkpoint root
-  checkpoint_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/states/finalized/finality_checkpoints"
+  # Gets sync committee for HEAD of the chain
+  sync_committee_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/states/head/sync_committees"
+  sync_committee = callsAPI(sync_committee_url)
+  # Returns all validator indices in the current sync committee
+  # print(sync_committee)
+
+  # Gets finalized checkpoint root for HEAD of the chain
+  checkpoint_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/states/head/finality_checkpoints"
   checkpoint = callsAPI(checkpoint_url)
   print(checkpoint['data']['finalized']) 
   checkpoint_root = checkpoint['data']['finalized']['root']  
   # Returns finality checkpoints for finalized state id
   print(checkpoint_root)
-  print("\n") 
-
-  # Place checkpoint root in block_header_url API call 
-  # Returns specified block header
-  specified_block_header_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/headers/0x3cf0393a193a9a95568700946fba64cdca2fdadbb571f40f230e93e5c457032f" 
-  specified_block_header = callsAPI(specified_block_header_url)
-  print("Specified: ") 
-  print(specified_block_header['data']['header']['message'])
-  print("\n")
-  print("Finalized: ")
 
   # I believe the finalized block header is the header I need to use to initialize the LC 
   # Returns finalized block header
@@ -83,8 +75,12 @@ if __name__ == "__main__":
   # From a beacon block, we can use merkle proofs to verify data about everything
   finalized_block_header_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/headers/finalized"
   finalized_block_header = callsAPI(finalized_block_header_url)
-  print(finalized_block_header['data']['header']['message']) 
+  block_header_message =  finalized_block_header['data']['header']['message']
+  # print("\n")
+  # print(finalized_block_header['data']['header']['message']) 
   
   # Figure out how to instantiate container with API message 
   # Do the message, or individual data types within the container need to be serialized?
-    
+  bh = 23
+  serialized_bh = remerkleable.basic.boolean.encode_bytes(bh)
+  print(serialized_bh)

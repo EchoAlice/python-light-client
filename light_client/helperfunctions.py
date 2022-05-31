@@ -1,6 +1,7 @@
-from containers import LightClientUpdate
-from containers import BeaconBlockHeader
-from containers import LightClientStore
+# from containers import LightClientUpdate
+# from containers import BeaconBlockHeader
+# from containers import LightClientStore
+from remerkleable import uint64
 
 # Helper functions
 def is_finality_update(update: LightClientUpdate) -> bool:
