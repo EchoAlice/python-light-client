@@ -1,6 +1,6 @@
 from typing import Container
 import remerkleable
-from remerkleable import uint64, Bytes32
+from remerkleable import uint64, Bytes32, Bytes48, Bytes96
 # Containers - A Container class can be described as a special component that can hold the gathering of the components.
 
 # Define custom types:
@@ -16,8 +16,8 @@ Hash32	= Bytes32
 # DomainType = Bytes4	
 # ForkDigest = Bytes4	
 # Domain = Bytes32	
-# BLSPubkey =	Bytes48
-# BLSSignature = Bytes96
+BLSPubkey =	Bytes48
+BLSSignature = Bytes96
 Slot = 10
 
 print(type(Slot))
@@ -39,6 +39,10 @@ class BeaconBlockHeader(Container):
     parent_root: Root
     state_root: Root
     body_root: Root
+
+class SyncCommittee(Container):
+    pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
+    aggregate_pubkey: BLSPubkey
 
 # This is the data we request to stay synced.  We need an update every 27(ish) hours
 class LightClientUpdate(Container):
