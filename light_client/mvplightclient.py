@@ -1,5 +1,5 @@
 import requests
-import remerkleable
+import remerkleable.core
 
 # from containers import BeaconBlockHeader
 
@@ -42,7 +42,6 @@ if __name__ == "__main__":
   #     block header that they already know about, and use the public keys 
   #     in the sync committee to directly authenticate signatures of more recent blocks.
 
-
   # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 
   # Summary of what light client needs to do 
@@ -52,22 +51,26 @@ if __name__ == "__main__":
   # if update_light_client() == true:
   #   updateLightClient(LightClientStore)
 
-  # Step 1:  Get current sync committee
-  # Full node provides a trusted checkpoint root.
+  # Step 1:  Gather most recent finality checkpoint (pretty much a weak subjectivity checkpoint)
+  checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
+  checkpoint = callsAPI(checkpoint_url)
+  checkpoint_root = checkpoint['data']['current_justified']['root']  
+  checkpoint_epoch = checkpoint['data']['finalized']['epoch'] 
+  print(checkpoint['data']['finalized'])
 
-  # Gets sync committee for HEAD of the chain
+  # Call lightclient/snapshot with most recent checkpoint root to bootstrap to a period
+  # How do you bootstrap to a period? 
+  snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x354946e0e14432c9671317d826c10cc3b91d0690c4e8099dce1749f950cd63b3" 
+  snapshot = callsAPI(snapshot_url) 
+  list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
+  print(list_of_keys)
+  
+  
+  # Gets sync committee associated with the given checkpoint root
   sync_committee_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/states/head/sync_committees"
   sync_committee = callsAPI(sync_committee_url)
   # Returns all validator indices in the current sync committee
   # print(sync_committee)
-
-  # Gets finalized checkpoint root for HEAD of the chain
-  checkpoint_url = "https://api.allorigins.win/raw?url=http://testing.mainnet.beacon-api.nimbus.team/eth/v1/beacon/states/head/finality_checkpoints"
-  checkpoint = callsAPI(checkpoint_url)
-  print(checkpoint['data']['finalized']) 
-  checkpoint_root = checkpoint['data']['finalized']['root']  
-  # Returns finality checkpoints for finalized state id
-  print(checkpoint_root)
 
   # I believe the finalized block header is the header I need to use to initialize the LC 
   # Returns finalized block header
@@ -81,6 +84,3 @@ if __name__ == "__main__":
   
   # Figure out how to instantiate container with API message 
   # Do the message, or individual data types within the container need to be serialized?
-  bh = 23
-  serialized_bh = remerkleable.basic.boolean.encode_bytes(bh)
-  print(serialized_bh)
