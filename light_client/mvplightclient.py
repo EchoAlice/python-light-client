@@ -1,8 +1,7 @@
 import requests
-from remerkleable.basic import bit, uint
-from remerkleable.basic import uint64
+from remerkleable.basic import bit, uint, uint8, uint64
 
-# from containers import SyncCommittee
+from containers import SyncCommittee
 
 #  MVP Light Client:  Track latest state/block root
 def callsAPI(url):
@@ -82,19 +81,11 @@ if __name__ == "__main__":
   # Do the message, or individual data types within the container need to be serialized?
 
 
-  # Practice: Serialize one bit with remerkleable library
-  serialized_bit = bit.encode_bytes(True)
-  deserialized_bit = bit.decode_bytes(serialized_bit)
-  print("Serialized: " + str(serialized_bit) + "\n" + "Deserealized: " + str(deserialized_bit))
+  # current_sync_committee = SyncCommittee(pubkeys = list_of_keys, aggregate_pubkey = current_aggregate_pubkey)
+  
+  # Looks like the inputs aren't updating the SyncCommittee
+  current_sync_committee = SyncCommittee(pubkeys = list_of_keys, aggregate_pubkey = current_aggregate_pubkey)
+  print(current_sync_committee)
 
-  # Practice: Convert int -> uintN -> bytes
-  # uintN (basic type) to bytesN/8
-  first = uint64(420)
-  second = uint64(420)
-  sum = first + second 
-
-  # uint64 to bytes
-  bytes = uint.encode_bytes(sum)
-  print(type(bytes))
 
   # Now serialize BLS Pubkey ->
