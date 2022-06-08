@@ -1,7 +1,6 @@
 import requests
-import remerkleable
-import remerkleable.basic
-from remerkleable.basic import bit 
+from remerkleable.basic import bit, uint
+from remerkleable.basic import uint64
 
 # from containers import SyncCommittee
 
@@ -83,8 +82,19 @@ if __name__ == "__main__":
   # Do the message, or individual data types within the container need to be serialized?
 
 
-  # Serialize one bit with remerkleable library
-  serialized = bit.encode_bytes(True)
-  print(serialized)
-  deserialized = bit.decode_bytes(serialized)
-  print(deserialized)
+  # Practice: Serialize one bit with remerkleable library
+  serialized_bit = bit.encode_bytes(True)
+  deserialized_bit = bit.decode_bytes(serialized_bit)
+  print("Serialized: " + str(serialized_bit) + "\n" + "Deserealized: " + str(deserialized_bit))
+
+  # Practice: Convert int -> uintN -> bytes
+  # uintN (basic type) to bytesN/8
+  first = uint64(420)
+  second = uint64(420)
+  sum = first + second 
+
+  # uint64 to bytes
+  bytes = uint.encode_bytes(sum)
+  print(type(bytes))
+
+  # Now serialize BLS Pubkey ->
