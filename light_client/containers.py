@@ -1,28 +1,28 @@
-from typing import Container
-import remerkleable
-from remerkleable import uint64, Bytes32, Bytes48, Bytes96
-# Containers - A Container class can be described as a special component that can hold the gathering of the components.
+from dataclasses import dataclass
+from remerkleable.basic import uint64, byte
+from remerkleable.complex import Container, Vector
 
-# Define custom types:
+# Alliases:  (Helps readability of code)
+Bytes4 = Vector[byte, 4]
+Bytes32 = Vector[byte, 32]
+Bytes48 = Vector[byte, 48]
+Bytes96 = Vector[byte, 96]
+
+# Define custom types (aka alliases):
 Slot = uint64
 Epoch = uint64
 CommitteeIndex = uint64
 ValidatorIndex	= uint64	
 Gwei =	uint64	
-SyncCommittee = [uint64]
 Root = Bytes32	
 Hash32	= Bytes32
-# Version	= Bytes4	
-# DomainType = Bytes4	
-# ForkDigest = Bytes4	
-# Domain = Bytes32	
+Version	= Bytes4
 BLSPubkey =	Bytes48
 BLSSignature = Bytes96
-Slot = 10
 
-print(type(Slot))
 # Constants for merkle proofs:
-#
+SYNC_COMMITTEE_SIZE = 512
+
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
 # A Generalized index is a way of referring to a poisition of an object in a merkle tree,
 # so that the Merkle proof verification algorithm knows what path to check the hashes against
@@ -30,19 +30,22 @@ print(type(Slot))
 # FINALIZED_ROOT_INDEX = get_generalized_index(BeaconState, 'finalized_checkpoint', 'root')
 # NEXT_SYNC_COMMITTEE_INDEX = get_generalized_index(BeaconState, 'next_sync_committee')
 
+# Containers - A Container class can be described as a special component that can hold the gathering of the components.
+
 # If all goes well, we'll update our light client memory with this header
 # The header is the key trusted piece of data we use to verify merkle proofs against.
 # From a beacon block, we can use merkle proofs to verify data about everything.  ie beacon state
+
 class BeaconBlockHeader(Container):
-    slot: Slot
-    proposer_index: ValidatorIndex
-    parent_root: Root
-    state_root: Root
-    body_root: Root
+  slot: Slot
+  proposer_index: ValidatorIndex
+  parent_root: Root
+  state_root: Root
+  body_root: Root
 
 class SyncCommittee(Container):
-    pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
-    aggregate_pubkey: BLSPubkey
+  pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
+  aggregate_pubkey: BLSPubkey
 
 # This is the data we request to stay synced.  We need an update every 27(ish) hours
 class LightClientUpdate(Container):
