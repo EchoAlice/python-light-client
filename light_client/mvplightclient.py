@@ -1,5 +1,6 @@
 import requests
 from remerkleable.basic import bit, uint, uint8, uint64
+from remerkleable.complex import List
 
 from containers import SyncCommittee
 
@@ -9,11 +10,18 @@ def callsAPI(url):
   json_object = response.json() 
   return json_object
 
+# Fun, but delete later
 def countPubKeys(list):
   key_count = 0
   for items in list:
     key_count += 1
   return key_count
+
+def parseHexToByte(hex_string):
+  if hex_string[:2] == '0x':
+    hex_string = hex_string[2:]
+  byte_string = bytes.fromhex(hex_string)
+  return byte_string 
 
 def getBeaconBlockHeader():
   print("Get information needed for a block header")
@@ -22,7 +30,7 @@ if __name__ == "__main__":
   # If I want to make this light client for the cross chain bridge, the code will need to be written in Solidity.
   # Light client for cross chain bridge is ran as a smart contract on the destination chain!
   # 
-  # Initialization:
+  # Initialization/Bootstrapping to a period:
   #
   # Place all information relating to initialization and syncronization in the LightClientStore data class.
   # This information needs to follow SSZ container specifications
@@ -50,7 +58,7 @@ if __name__ == "__main__":
   # Summary of what light client needs to do: 
   # checkpoint_root = request(finality_checkpoint)
   # snapshot = request(snapshot(checkpoint_root))
-  # verifyCurrentSyncCommitteeBranch(snapshot)
+  # verifyCurrentSyncCommitteeBranch(snapshot[data][current_sync_committee])
   # LightClientStore = syncLightClientTo(block_header)
   # if update_light_client() == true:
   #   updateLightClient(LightClientStore)
@@ -70,22 +78,20 @@ if __name__ == "__main__":
   snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x354946e0e14432c9671317d826c10cc3b91d0690c4e8099dce1749f950cd63b3" 
   snapshot = callsAPI(snapshot_url) 
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
-  current_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
-  number_of_keys = countPubKeys(list_of_keys)
- 
-  # SyncCommittee(pubkeys = list_of_keys, aggregate_pubkey = current_aggregate_pubkey)
-  # print(current_aggregate_pubkey) 
-  # print(number_of_keys) 
-  
-  # Figure out how to instantiate container with API message 
-  # Do the message, or individual data types within the container need to be serialized?
+  hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
 
+  # "When the pubkey is encoded to hex, every byte becomes two characters.  All data sent is
+  # in json format, and the unofficial standard is to send binary data as 0x prefixed hex.
+  # You'll need to parse keys back into byte arrays to do crypto on it"      <-- Do crypto on it???
+  #                                       - Cayman
+  # Parses keys back into byte arrays 
+  for i in range(len(list_of_keys)):
+    list_of_keys[i] = parseHexToByte(list_of_keys[i])
+  current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
 
-  # current_sync_committee = SyncCommittee(pubkeys = list_of_keys, aggregate_pubkey = current_aggregate_pubkey)
-  
-  # Looks like the inputs aren't updating the SyncCommittee
-  current_sync_committee = SyncCommittee(pubkeys = list_of_keys, aggregate_pubkey = current_aggregate_pubkey)
+  # Creates SyncCommittee container
+  current_sync_committee = SyncCommittee(
+    pubkeys = list_of_keys,
+    aggregate_pubkey = current_aggregate_pubkey
+  )
   print(current_sync_committee)
-
-
-  # Now serialize BLS Pubkey ->
