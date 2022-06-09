@@ -76,9 +76,11 @@ if __name__ == "__main__":
   #     current sync committee branch- Proof of the current sync committee in the form of a Merkle branch 
   
   snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x354946e0e14432c9671317d826c10cc3b91d0690c4e8099dce1749f950cd63b3" 
-  snapshot = callsAPI(snapshot_url) 
+  snapshot = callsAPI(snapshot_url)
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
   hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
+  current_sync_committee_branch = snapshot['data']['current_sync_committee_branch']
+  print(current_sync_committee_branch)
 
   # "When the pubkey is encoded to hex, every byte becomes two characters.  All data sent is
   # in json format, and the unofficial standard is to send binary data as 0x prefixed hex.
@@ -94,4 +96,6 @@ if __name__ == "__main__":
     pubkeys = list_of_keys,
     aggregate_pubkey = current_aggregate_pubkey
   )
-  print(current_sync_committee)
+  # print(current_sync_committee)
+
+  #Verify Merkle branch form sync committee
