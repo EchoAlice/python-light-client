@@ -1,7 +1,7 @@
 import requests
-from merkletreelogic import checkMerkleProof
 from remerkleable.basic import bit, uint, uint8, uint64
 from remerkleable.complex import List
+from containers import Checkpoint
 from containers import SyncCommittee
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
@@ -17,45 +17,49 @@ def parseHexToByte(hex_string):
   return byte_string 
 
 if __name__ == "__main__":
-  # Initialization/Bootstrapping to a period:
   #
-  # Place all information relating to initialization and syncronization in the LightClientStore data class.
-  # This information needs to follow SSZ container specifications
+  #                                      \\\\\\\\\\\\\\\\\\\  ////////////////////
+  #                                      =========================================
+  #                                      Initialization/Bootstrapping to a period:
+  #                                      =========================================
+  #                                      ///////////////////  \\\\\\\\\\\\\\\\\\\\
   #
-  #   Get block header at slot N in period X = N // 16384
-  #   Ask node for current sync committee + proof of checkpoint root
-  #   
-  #   Node responds with a snapshot --> A snapshot contains:
+  #     Get block header at slot N in period X = N // 16384
+  #     Ask node for current sync committee + proof of checkpoint root
+  #     Node responds with a snapshot
+  #     
+  #     Snapshot contains:
+  #     A. Header- Block's header corresponding to the checkpoint root
+  #     
+  #           The light client stores a header so it can ask for merkle branches to 
+  #           authenticate transactions and state against the header (I want to learn about how this happens)
   #
-  #   1. Header- Block's header corresponding to the checkpoint root
+  #     B. Current sync committee- Public Keys and the aggregated pub key of the current sync committee
   #   
-  #      A word on Headers:
-  #         The light client stores a header so it can ask for merkle branches to 
-  #         authenticate transactions and state against the header (I want to learn about how this happens)
-  #
-  #   2. Current sync committee- Public Keys and the aggregated pub key of the current sync committee
+  #           The purpose of the sync committee is to allow light clients to keep track
+  #           of the chain of beacon block headers. 
+  #           Sync committees are (i) updated infrequently, and (ii) saved directly in the beacon state, 
+  #           allowing light clients to verify the sync committee with a Merkle branch from a 
+  #           block header that they already know about, and use the public keys 
+  #           in the sync committee to directly authenticate signatures of more recent blocks.
   #   
-  #      A word on Sync committees: 
-  #         The purpose of the sync committee is to allow light clients to keep track
-  #         of the chain of beacon block headers. 
-  #         Sync committees are (i) updated infrequently, and (ii) saved directly in the beacon state, 
-  #         allowing light clients to verify the sync committee with a Merkle branch from a 
-  #         block header that they already know about, and use the public keys 
-  #         in the sync committee to directly authenticate signatures of more recent blocks.
-  #   
-  #   3. Current sync committee branch- Proof of the current sync committee in the form of a Merkle branch 
+  #     C. Current sync committee branch- Proof of the current sync committee in the form of a Merkle branch 
 
 
-
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   # ===================================================================
-  # STEP 1:  Gather most recent finality (weak subjectivity) checkpoint
+  # STEP 1:  Gather snapshot from node based on finality checkpoint
   # ===================================================================
-  
+  # ///////////////////////////////////////////////////////////////////
 
   checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
   checkpoint = callsAPI(checkpoint_url)
-  checkpoint_root = checkpoint['data']['finalized']['root']  
-  
+  finalized_checkpoint_epoch = checkpoint['data']['finalized']['epoch']
+  finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
+  # Implement checkpoint container 
+  print(finalized_checkpoint_epoch)
+  print(finalized_checkpoint_root)
+
   snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x354946e0e14432c9671317d826c10cc3b91d0690c4e8099dce1749f950cd63b3" 
   snapshot = callsAPI(snapshot_url)
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
@@ -67,30 +71,50 @@ if __name__ == "__main__":
   # You'll need to parse keys back into byte arrays to do crypto on it"      <-- Do crypto on it???
   #                                       - Cayman
   # 
-  # Parses keys back into byte arrays 
+
+  # ----------------------------------------
+  # Parse JSON INFORMATION FROM HEX TO BYTES
+  # ----------------------------------------
+
+  #   CHECKPOINT-
+  finalized_checkpoint_epoch = parseHexToByte(finalized_checkpoint_epoch) 
+  finalized_checkpoint_root =  parseHexToByte(finalized_checkpoint_root)
+
+  #   SYNC COMMITTEE- 
+  #     List of Keys 
   for i in range(len(list_of_keys)):
     list_of_keys[i] = parseHexToByte(list_of_keys[i])
   
+  #     Aggregate Key
   current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
 
-  # Creates SyncCommittee container
+  #     Sync Committee Branch 
+  for i in range(len(current_sync_committee_branch)):
+    current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
+
+  # ------------------
+  # CREATE SSZ OBJECTS
+  # ------------------
+  
+  # Checkpoint
+  trusted_checkpoint = Checkpoint(
+    epoch = finalized_checkpoint_epoch, 
+    root = finalized_checkpoint_root 
+  )
+  print(trusted_checkpoint)
+  # SyncCommittee
   current_sync_committee = SyncCommittee(
     pubkeys = list_of_keys,
     aggregate_pubkey = current_aggregate_pubkey
   )
-  # print(current_sync_committee)
-  
-  # Parses current_sync_committee_branch into byte arrays
-  for i in range(len(current_sync_committee_branch)):
-    current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
-  print(current_sync_committee_branch[0])
+ 
   
 
-
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   # =================================================
   # STEP 2: Verify Merkle branch from sync committee
   # =================================================
-
+  # /////////////////////////////////////////////////
 
   # We'll describe paths as lists, which can have two representations. In "human-readable form",
   # they are ["x"], ["y", "__len__"] and ["y", 5, "w"] respectively. In "encoded form", they are 
@@ -101,5 +125,4 @@ if __name__ == "__main__":
   #  How do you hash these bad boys? 
   #
   # What is the trusted root?  Where is the sync committee stored? <--- Is that question even relevant? 
-  checkMerkleProof(checkpoint_root, given_root, current_sync_committee_branch)
-  
+  # checkMerkleProof(checkpoint_root, given_root, current_sync_committee_branch)
