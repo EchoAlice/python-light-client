@@ -1,6 +1,7 @@
 import requests
 from remerkleable.basic import bit, uint, uint8, uint64
 from remerkleable.complex import List
+from remerkleable.core import View
 from containers import Checkpoint
 from containers import SyncCommittee
 
@@ -17,12 +18,14 @@ def parseHexToByte(hex_string):
   return byte_string 
 
 if __name__ == "__main__":
-  #
+  #                                    
+  #                                     \\\\\\\\\\\\\\\\\\\ || ////////////////////
   #                                      \\\\\\\\\\\\\\\\\\\  ////////////////////
   #                                      =========================================
   #                                      Initialization/Bootstrapping to a period:
   #                                      =========================================
   #                                      ///////////////////  \\\\\\\\\\\\\\\\\\\\
+  #                                     /////////////////// || \\\\\\\\\\\\\\\\\\\\
   #
   #     Get block header at slot N in period X = N // 16384
   #     Ask node for current sync committee + proof of checkpoint root
@@ -48,18 +51,22 @@ if __name__ == "__main__":
 
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   # ===================================================================
-  # STEP 1:  Gather snapshot from node based on finality checkpoint
+  # STEP 1:  Gather snapshot from node based on finality 
+  #           checkpoint and place data into containers
   # ===================================================================
   # ///////////////////////////////////////////////////////////////////
 
+  # ------------------------------------------
+  # MAKE API CALLS FOR CHECKPOINT AND SNAPSHOT
+  # ------------------------------------------
+
+  # CHECKPOINT-
   checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
   checkpoint = callsAPI(checkpoint_url)
   finalized_checkpoint_epoch = checkpoint['data']['finalized']['epoch']
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
-  # Implement checkpoint container 
-  print(finalized_checkpoint_epoch)
-  print(finalized_checkpoint_root)
 
+  # SNAPSHOT-
   snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x354946e0e14432c9671317d826c10cc3b91d0690c4e8099dce1749f950cd63b3" 
   snapshot = callsAPI(snapshot_url)
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
@@ -73,7 +80,7 @@ if __name__ == "__main__":
   # 
 
   # ----------------------------------------
-  # Parse JSON INFORMATION FROM HEX TO BYTES
+  # PARSE JSON INFORMATION FROM HEX TO BYTES
   # ----------------------------------------
 
   #   CHECKPOINT-
@@ -81,27 +88,28 @@ if __name__ == "__main__":
   finalized_checkpoint_root =  parseHexToByte(finalized_checkpoint_root)
 
   #   SYNC COMMITTEE- 
-  #     List of Keys 
+  #       List of Keys 
   for i in range(len(list_of_keys)):
     list_of_keys[i] = parseHexToByte(list_of_keys[i])
   
-  #     Aggregate Key
+  #       Aggregate Key
   current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
 
-  #     Sync Committee Branch 
+  #       Sync Committee Branch 
   for i in range(len(current_sync_committee_branch)):
     current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
 
   # ------------------
   # CREATE SSZ OBJECTS
   # ------------------
-  
+ 
   # Checkpoint
+  # Hold up- I might not need this object
   trusted_checkpoint = Checkpoint(
     epoch = finalized_checkpoint_epoch, 
     root = finalized_checkpoint_root 
   )
-  print(trusted_checkpoint)
+  
   # SyncCommittee
   current_sync_committee = SyncCommittee(
     pubkeys = list_of_keys,
@@ -116,13 +124,30 @@ if __name__ == "__main__":
   # =================================================
   # /////////////////////////////////////////////////
 
-  # We'll describe paths as lists, which can have two representations. In "human-readable form",
-  # they are ["x"], ["y", "__len__"] and ["y", 5, "w"] respectively. In "encoded form", they are 
-  #     lists of uint64 values (Bytes8) 
-
   #  Current_sync_committee_branch contains 5 nodes.  
-  #  I have the nodes, now I need to find the leaf node to check and the root node I trust.
-  #  How do you hash these bad boys? 
-  #
-  # What is the trusted root?  Where is the sync committee stored? <--- Is that question even relevant? 
-  # checkMerkleProof(checkpoint_root, given_root, current_sync_committee_branch)
+  # 
+  #  Merkleize the sync committee object, then hash it against the merkle branch
+  #  If the output matches the checkpoint root... Yaaaay 
+
+  # ------------------
+  # MERKLEIZE THE SYNC COMMITTEE OBJECT
+  # ------------------
+  # This was too easy.  Do this myself!!!
+  sync_committee_root = View.hash_tree_root(current_sync_committee) 
+  print(sync_committee_root)
+
+  # merkleizeSyncCommittee(current_sync_committee)
+  
+  
+  
+  # ------------------
+  # HASH NODE AGAINST THE MERKLE BRANCH
+  # ------------------
+  # checkMerkleProof(checkpoint_root, current_sync_committee, current_sync_committee_branch)
+  
+  
+  
+  # ------------------
+  # CHECK VALIDITY
+  # ------------------
+  
