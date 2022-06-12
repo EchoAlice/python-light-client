@@ -63,7 +63,6 @@ if __name__ == "__main__":
   # CHECKPOINT-
   checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
   checkpoint = callsAPI(checkpoint_url)
-  finalized_checkpoint_epoch = checkpoint['data']['finalized']['epoch']
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
 
   # SNAPSHOT-
@@ -84,7 +83,6 @@ if __name__ == "__main__":
   # ----------------------------------------
 
   #   CHECKPOINT-
-  finalized_checkpoint_epoch = parseHexToByte(finalized_checkpoint_epoch) 
   finalized_checkpoint_root =  parseHexToByte(finalized_checkpoint_root)
 
   #   SYNC COMMITTEE- 
@@ -100,15 +98,8 @@ if __name__ == "__main__":
     current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
 
   # ------------------
-  # CREATE SSZ OBJECTS
+  # CREATE SSZ OBJECT
   # ------------------
- 
-  # Checkpoint
-  # Hold up- I might not need this object
-  trusted_checkpoint = Checkpoint(
-    epoch = finalized_checkpoint_epoch, 
-    root = finalized_checkpoint_root 
-  )
   
   # SyncCommittee
   current_sync_committee = SyncCommittee(
@@ -129,25 +120,21 @@ if __name__ == "__main__":
   #  Merkleize the sync committee object, then hash it against the merkle branch
   #  If the output matches the checkpoint root... Yaaaay 
 
-  # ------------------
+  # -----------------------------------
   # MERKLEIZE THE SYNC COMMITTEE OBJECT
-  # ------------------
-  # This was too easy.  Do this myself!!!
+  # -----------------------------------
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
   print(sync_committee_root)
 
+  # This was too easy.  Do this myself!!!
   # merkleizeSyncCommittee(current_sync_committee)
   
   
-  
-  # ------------------
+  # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
-  # ------------------
-  # checkMerkleProof(checkpoint_root, current_sync_committee, current_sync_committee_branch)
+  # -----------------------------------
+  
+  # checkMerkleProof(finalized_checkpoint_root, current_sync_committee, current_sync_committee_branch)
   
   
-  
-  # ------------------
-  # CHECK VALIDITY
-  # ------------------
   
