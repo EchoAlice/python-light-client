@@ -20,7 +20,7 @@ Version	= Bytes4
 BLSPubkey =	Bytes48
 BLSSignature = Bytes96
 
-# Constants for merkle proofs:
+# Constants:
 SYNC_COMMITTEE_SIZE = 512
 
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
@@ -42,10 +42,6 @@ class BeaconBlockHeader(Container):
   parent_root: Root
   state_root: Root
   body_root: Root
-
-class Checkpoint(Container):
-    epoch: Epoch
-    root: Root
 
 class SyncCommittee(Container):
   pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
