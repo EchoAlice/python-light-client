@@ -2,8 +2,8 @@ import requests
 from remerkleable.basic import bit, uint, uint8, uint64
 from remerkleable.complex import List
 from remerkleable.core import View
-from containers import Checkpoint
 from containers import SyncCommittee
+from merkletreelogic import checkMerkleProof
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def callsAPI(url):
@@ -134,7 +134,6 @@ if __name__ == "__main__":
   # HASH NODE AGAINST THE MERKLE BRANCH
   # -----------------------------------
   
-  # checkMerkleProof(finalized_checkpoint_root, current_sync_committee, current_sync_committee_branch)
-  
+  checkMerkleProof(finalized_checkpoint_root, current_sync_committee, current_sync_committee_branch)
   
   
