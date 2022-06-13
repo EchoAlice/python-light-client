@@ -1,7 +1,5 @@
 import requests
-from eth2spec.utils.hash_function import hash
-from remerkleable.basic import bit, uint, uint8, uint64
-from remerkleable.complex import List
+from remerkleable.basic import uint64
 from remerkleable.core import View
 from containers import BeaconBlockHeader, SyncCommittee
 from merkletreelogic import checkMerkleProof
@@ -23,7 +21,7 @@ if __name__ == "__main__":
   #                                     \\\\\\\\\\\\\\\\\\\ || ////////////////////
   #                                      \\\\\\\\\\\\\\\\\\\  ////////////////////
   #                                      =========================================
-  #                                      Initialization/Bootstrapping to a period:
+  #                                      INITIALIZATION/BOOTSTRAPPING TO A PERIOD:
   #                                      =========================================
   #                                      ///////////////////  \\\\\\\\\\\\\\\\\\\\
   #                                     /////////////////// || \\\\\\\\\\\\\\\\\\\\
@@ -66,57 +64,30 @@ if __name__ == "__main__":
   checkpoint = callsAPI(checkpoint_url)
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
 
-  # BEACON BLOCK HEADER- 
-  beacon_block_header_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/headers/0x6b1a3fd7565d41ae1860d976e836842c71f9aee7aeada03ca1e4abf1dd789aef"
-  beacon_block_header = callsAPI(beacon_block_header_url)
-  beacon_info = beacon_block_header['data']['header']['message']
-  beacon_slot = beacon_info['slot']
-  beacon_proposer_index = beacon_info['proposer_index']
-  beacon_parent_root = beacon_info['parent_root']
-  beacon_state_root = beacon_info['state_root']
-  beacon_body_root = beacon_info['body_root']
-
   # SNAPSHOT-
   snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x6b1a3fd7565d41ae1860d976e836842c71f9aee7aeada03ca1e4abf1dd789aef" 
   snapshot = callsAPI(snapshot_url)
+  header_state_root = snapshot['data']['header']['state_root']
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
   hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
   current_sync_committee_branch = snapshot['data']['current_sync_committee_branch']
-
-  # "When the pubkey is encoded to hex, every byte becomes two characters.  All data sent is
-  # in json format, and the unofficial standard is to send binary data as 0x prefixed hex.
-  # You'll need to parse keys back into byte arrays to do crypto on it"      <-- Do crypto on it???
-  #                                       - Cayman
-  # 
 
   # ----------------------------------------
   # PARSE JSON INFORMATION FROM HEX TO BYTES
   # ----------------------------------------
 
-  #   CHECKPOINT-
-  finalized_checkpoint_root =  parseHexToByte(finalized_checkpoint_root)
-
-  #   BEACON BLOCK HEADER-
-  print(beacon_info)
-  print("\n")
-  
-  # I MAY HAVE TO TURN THE SLOT AND INDEX INTO UINT64s 
-  # beacon_slot = uint64(beacon_slot) 
-  # print(type(beacon_slot)) 
-  # beacon_proposer_index = uint64(beacon_proposer_index)
-  beacon_parent_root = parseHexToByte(beacon_parent_root) 
-  beacon_state_root = parseHexToByte(beacon_state_root) 
-  beacon_body_root = parseHexToByte(beacon_body_root) 
-
+  # #   CHECKPOINT-
+  # finalized_checkpoint_root =  parseHexToByte(finalized_checkpoint_root)
 
   #   SYNC COMMITTEE- 
+  #       Aggregate Key and Header State Root
+  current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
+  header_state_root = parseHexToByte(header_state_root)
+  
   #       List of Keys 
   for i in range(len(list_of_keys)):
     list_of_keys[i] = parseHexToByte(list_of_keys[i])
   
-  #       Aggregate Key
-  current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
-
   #       Sync Committee Branch 
   for i in range(len(current_sync_committee_branch)):
     current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
@@ -125,23 +96,20 @@ if __name__ == "__main__":
   # CREATE SSZ OBJECT
   # ------------------
 
-  # ERROR HERE.   I NEED TO MAKE THE BEACON SLOT AN UINT64!!!  Then I'll be able to check the proof against the correct root
-  # BlockBodyHeader
-  current_header = BeaconBlockHeader(
-    slot = beacon_slot,
-    proposer_index = beacon_proposer_index,
-    parent_root = beacon_parent_root,
-    state_root = beacon_state_root,
-    body_root = beacon_body_root,
-  )  
-
   # SyncCommittee
   current_sync_committee = SyncCommittee(
     pubkeys = list_of_keys,
     aggregate_pubkey = current_aggregate_pubkey
   )
 
-
+  #--------------------------------------------
+  # MERKLEIZE SYNC ROOT AND VERIFY MERKLE PROOF  
+  #--------------------------------------------
+  
+  sync_committee_root = View.hash_tree_root(current_sync_committee) 
+  # checkMerkleProof(sync_committee_root, finalized_checkpoint_root, current_sync_committee_branch)
+  checkMerkleProof(sync_committee_root, header_state_root, current_sync_committee_branch)
+  
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   # =================================================
   # STEP 2: Verify Merkle branch from sync committee
@@ -150,17 +118,16 @@ if __name__ == "__main__":
 
   # 
   #  Merkleize the sync committee object, then hash it against the merkle branch
-  #  If the output matches the checkpoint root... Yaaaay 
+  #  If the output matches the hash_tree_root(beacon block header)... Yaaaay 
 
   # -----------------------------------
   # MERKLEIZE THE SYNC COMMITTEE OBJECT
   # -----------------------------------
-  beacon_block_header_root = View.hash_tree_root(beacon_block_header) 
+
+  # beacon_block_header_root = View.hash_tree_root(beacon_block_header) 
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
-  
   # This was too easy.  Do this myself!!!
   # merkleizeSyncCommittee(current_sync_committee)
-  
   
   # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
@@ -169,8 +136,32 @@ if __name__ == "__main__":
   # Check proof function works, BUT the values still aren't matching up
   # Am I comparing this hashed value to the wrong hash_tree_root?
   # The answer isn't just to hash tree root the checkpoint container
+  #
+  # 2^5 == 32 <--- number of nodes in the merkle tree that proves hash_tree_root(BeaconState).   
+  # This is the number of nodes needed to create a merkle tree for BeaconState 
+  #
+  # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
 
-  # 2^5 == 32 <--- number of nodes in the 
-  # Compare hashed answer to the BEACON BLOCK HEADER that the sync committee is a part of!
+  # checkMerkleProof(beacon_block_header_root, sync_committee_root, current_sync_committee_branch)
+  # checkMerkleProof(sync_committee_root, finalized_checkpoint_root, current_sync_committee_branch)
 
-  checkMerkleProof(beacon_block_header_root, sync_committee_root, current_sync_committee_branch)
+
+
+  #                                     \\\\\\\\\\\\\\\\\\\   |||   ////////////////////
+  #                                      \\\\\\\\\\\\\\\\\\\   |   ////////////////////
+  #                                      ==============================================
+  #                                      GET COMMITTEE UPDATES UP UNTIL CURRENT PERIOD:
+  #                                      ==============================================
+  #                                      ///////////////////   |   \\\\\\\\\\\\\\\\\\\\
+  #                                     ///////////////////   |||   \\\\\\\\\\\\\\\\\\\\
+
+
+
+
+  #                                       \\\\\\\\\\\\\\\\\\\ || ////////////////////
+  #                                        \\\\\\\\\\\\\\\\\\\  ////////////////////
+  #                                        ========================================
+  #                                        SYNC TO THE LATEST FINALIZED CHECKPOINT:
+  #                                        ========================================
+  #                                        ///////////////////  \\\\\\\\\\\\\\\\\\\\
+  #                                       /////////////////// || \\\\\\\\\\\\\\\\\\\\
