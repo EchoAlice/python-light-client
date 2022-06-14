@@ -61,30 +61,41 @@ def hash_pair(left, right):
   parent_node = hash(left + right)
   return parent_node
 
+
+# See if the merkle root I get from hashing this manually is the same as below
+
+#   ========================
+#   TEST MERKLE TREE VALUES!
+#   ========================
+
 # Encodes manual merkle leaves into bytes
 m_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
 for i in range(len(m_leaf_nodes)):
   m_leaf_nodes[i] = m_leaf_nodes[i].encode('utf-8')
 
-# See if the merkle root I get from hashing this manually is the same as below
+# Create my own merkle tree.  Record hashed values.  Use these as test values
 one_a = hash_pair(m_leaf_nodes[0], m_leaf_nodes[1])
 one_b = hash_pair(m_leaf_nodes[2], m_leaf_nodes[3])
 one_c = hash_pair(m_leaf_nodes[4], m_leaf_nodes[5])
 one_d = hash_pair(m_leaf_nodes[6], m_leaf_nodes[7])
-print("Level one: ")
-print(one_a, one_b, one_c, one_d)
-print("\n")
+# print(one_a, "\n", one_b, "\n", one_c, "\n", one_d)
+# print("\n")
 
 two_a = hash_pair(one_a, one_b)
 two_b = hash_pair(one_c, one_d)
-print("Level two: ")
-print(two_a, two_b)
-print("\n")
+# print("Level two: ")
+# print(two_a, "\n", two_b)
+# print("\n")
 
 test_root = hash_pair(two_a, two_b)
-print("Level 3: ")
-print(test_root)
+# print("Level 3: ")
 print("\n")
+print("Root: " + str(test_root))
+
+
+
+
+
 
 
 
@@ -92,13 +103,11 @@ leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
 for i in range(len(leaf_nodes)):
   leaf_nodes[i] = leaf_nodes[i].encode('utf-8')
 
-# Create my own merkle tree.  Record hashed values.  Use these as test values
-
-# Figure out how to record the whole tree instead of erassing each level below 
+# Record the whole tree instead of errasing each level below 
 def naive_merkle_tree(nodes):
   parent_nodes = [] 
   if len(nodes) == 1:
-    print("Root node: " + str(nodes)) 
+    print("\n") 
     return 
   for i in range(len(nodes)):
     if i % 2 == 0: 
@@ -108,48 +117,68 @@ def naive_merkle_tree(nodes):
   naive_merkle_tree(nodes) 
   return
 
-function_root = naive_merkle_tree(leaf_nodes)
-print(function_root)
+# naive_merkle_tree(leaf_nodes)
 
 
 
 
-#     USE INDEX HERE!
+
+
+
+
+
+
+
+i_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
+for i in range(len(i_leaf_nodes)):
+  i_leaf_nodes[i] = i_leaf_nodes[i].encode('utf-8')
 
 # # count, value
 # for i, h in enumerate(current_sync_committee_branch):
 #   print(i, h)
 
-# Create my own index to see if this thing would work.  Hard code this one.
-# def checkMerkleProof(leaf, root, branch, index):
-#   node_to_hash = leaf
-#   for i in range(len(branch)-1,-1,-1):                        # for i in range(len(index)):   # <-- If you want to go forward through witness
-#     if index[i] == '0':
-#       hashed_node = hash(node_to_hash + branch[i])
-#     if index[i] == '1':
-#       hashed_node = hash(branch[i] + node_to_hash)
-#     node_to_hash = hashed_node
+# Created my own index to check merkle proof
+def checkMerkleProof(leaf, root, branch, index):
+  node_to_hash = leaf
+  for i in range(len(index)):                      
+    if index[i] == 0:
+      hashed_node = hash_pair(branch[i], node_to_hash)
+    if index[i] == 1:
+      hashed_node = hash_pair(node_to_hash, branch[i])
+    node_to_hash = hashed_node
   
-#   print("Final value function: " + str(node_to_hash))
-#   print('\n')
-#   print("Trusted root: " + str(root)) 
-
-# if node_to_hash == root:
-#   return True
-# else:
-#   return False
+  print("Merkle Proof root: " + str(node_to_hash))
+  print("Trusted root: " + str(root)) 
 
 
 
+# Use index, witness, and leaf to get to the root!
+# Find:    root of i_leaf_nodes[5]          ( == b'4)
+
+witness = [i_leaf_nodes[5], one_d, two_a]
+index = [1, 1, 0]
+leaf = i_leaf_nodes[4]
+# Manually instantiate witness
+# print(witness)
+
+
+checkMerkleProof(leaf, test_root, witness, index)
 
 
 
 
 
+# first_hash = hash_pair(i_leaf_nodes[4], witness[0])
+# print("\n")
+# print("First hash: " + str(first_hash))
+# print("left: " + str(i_leaf_nodes[4]))
+# print("right: " + str(witness[0]))
+# print("\n")
 
-
-
-
+# print("One C: " + str(one_c))
+# print("left: " + str(m_leaf_nodes[4]))
+# print("right: " + str(m_leaf_nodes[5]))
+# print("\n")
 
 
 
