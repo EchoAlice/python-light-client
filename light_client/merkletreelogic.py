@@ -1,52 +1,8 @@
-from typing import Sequence
 from eth2spec.utils.hash_function import hash
-from containers import Bytes32, GeneralizedIndex, Root
 
-# Constants for merkle proofs:
-SYNC_COMMITTEE_SIZE = 512
-
-# Helper functions given to me by Ethereum!  Maybe I should Import them from protozzzzlambda
-
-def get_power_of_two_ceil(x: int) -> int:
-    """
-    Get the power of 2 for given input, or the closest higher power of 2 if the input is not a power of 2.
-    Commonly used for "how many nodes do I need for a bottom tree layer fitting x elements?"
-    Example: 0->1, 1->1, 2->2, 3->4, 4->4, 5->8, 6->8, 7->8, 8->8, 9->16.
-    """
-    if x <= 1:
-        return 1
-    elif x == 2:
-        return 2
-    else:
-        return 2 * get_power_of_two_ceil((x + 1) // 2)
-
-def get_power_of_two_floor(x: int) -> int:
-    """
-    Get the power of 2 for given input, or the closest lower power of 2 if the input is not a power of 2.
-    The zero case is a placeholder and not used for math with generalized indices.
-    Commonly used for "what power of two makes up the root bit of the generalized index?"
-    Example: 0->1, 1->1, 2->2, 3->2, 4->4, 5->4, 6->4, 7->4, 8->8, 9->8
-    """
-    if x <= 1:
-        return 1
-    if x == 2:
-        return x
-    else:
-        return 2 * get_power_of_two_floor(x // 2)
-
-# def calculate_merkle_root(leaf: Bytes32, proof: Sequence[Bytes32], index: GeneralizedIndex) -> Root:
-#     assert len(proof) == get_generalized_index_length(index)
-#     for i, h in enumerate(proof):
-#         if get_generalized_index_bit(index, i):
-#             leaf = hash(h + leaf)
-#         else:
-#             leaf = hash(leaf + h)
-#     return leaf
-
-
-
-
-
+def hash_pair(left, right):
+  parent_node = hash(left + right)
+  return parent_node
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # ===============================
@@ -54,14 +10,7 @@ def get_power_of_two_floor(x: int) -> int:
 # ===============================
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-# Goal of this exercise: Figure out how this indexing thing works for merkle proofs!
-
-
-def hash_pair(left, right):
-  parent_node = hash(left + right)
-  return parent_node
-
-
+# Figure out how this indexing thing works for merkle proofs!
 # See if the merkle root I get from hashing this manually is the same as below
 
 #   ========================
@@ -141,10 +90,11 @@ for i in range(len(i_leaf_nodes)):
 def checkMerkleProof(leaf, root, branch, index):
   node_to_hash = leaf
   for i in range(len(index)):                      
+    # Not sure which way you organize the left and right nodes for 0 and 1 bits 
     if index[i] == 0:
-      hashed_node = hash_pair(branch[i], node_to_hash)
-    if index[i] == 1:
       hashed_node = hash_pair(node_to_hash, branch[i])
+    if index[i] == 1:
+      hashed_node = hash_pair(branch[i], node_to_hash)
     node_to_hash = hashed_node
   
   print("Merkle Proof root: " + str(node_to_hash))
@@ -156,7 +106,7 @@ def checkMerkleProof(leaf, root, branch, index):
 # Find:    root of i_leaf_nodes[5]          ( == b'4)
 
 witness = [i_leaf_nodes[5], one_d, two_a]
-index = [1, 1, 0]
+index = [0, 0, 1]
 leaf = i_leaf_nodes[4]
 # Manually instantiate witness
 # print(witness)
@@ -166,7 +116,7 @@ checkMerkleProof(leaf, test_root, witness, index)
 
 
 
-
+# Debugging index
 
 # first_hash = hash_pair(i_leaf_nodes[4], witness[0])
 # print("\n")
@@ -179,16 +129,6 @@ checkMerkleProof(leaf, test_root, witness, index)
 # print("left: " + str(m_leaf_nodes[4]))
 # print("right: " + str(m_leaf_nodes[5]))
 # print("\n")
-
-
-
-
-
-
-
-
-
-
 
 
 
