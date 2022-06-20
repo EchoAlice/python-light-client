@@ -3,7 +3,6 @@ from remerkleable.core import View
 from containers import SyncCommittee
 from merkletreelogic import checkMerkleProof 
 
-
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def callsAPI(url):
   response = requests.get(url)
@@ -40,7 +39,7 @@ if __name__ == "__main__":
   #     A. Header- Block's header corresponding to the checkpoint root
   #     
   #           The light client stores a header so it can ask for merkle branches to 
-  #           authenticate transactions and state against the header (I want to learn about how this happens)
+  #           authenticate transactions and state against the header
   #
   #     B. Current sync committee- Public Keys and the aggregated pub key of the current sync committee
   #   
@@ -112,24 +111,26 @@ if __name__ == "__main__":
   # =================================================
   # /////////////////////////////////////////////////
 
-  # -----------------------------------
-  # MERKLEIZE THE SYNC COMMITTEE OBJECT
-  # -----------------------------------
+  # -----------------------------------------------------
+  #         MERKLEIZE THE SYNC COMMITTEE OBJECT
+  #
+  # Converts the sync committee object into a merkle root
+  # -----------------------------------------------------
   
-  # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
-   
+  
   # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
   # -----------------------------------
 
-  index = 54
   # 54 in binary, flipped around 
+  index = 54
   path = '011011' 
   
+  # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
   checkMerkleProof(sync_committee_root, header_state_root, current_sync_committee_branch, path)
+  
   # I have officially verified the merkle proof!
-
   
 
 
