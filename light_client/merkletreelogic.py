@@ -4,115 +4,154 @@ def hash_pair(left, right):
   parent_node = hash(left + right)
   return parent_node
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# ===============================
-#       MERKLE ROOT TESTING
-# ===============================
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# Figure out how this indexing thing works for merkle proofs!
-# See if the merkle root I get from hashing this manually is the same as below
-
 #   ========================
 #   TEST MERKLE TREE VALUES!
 #   ========================
 
-# Encodes manual merkle leaves into bytes
-m_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
-for i in range(len(m_leaf_nodes)):
-  m_leaf_nodes[i] = m_leaf_nodes[i].encode('utf-8')
+# # Encodes manual merkle leaves into bytes
+# m_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
+# for i in range(len(m_leaf_nodes)):
+#   m_leaf_nodes[i] = m_leaf_nodes[i].encode('utf-8')
 
-# Create my own merkle tree.  Record hashed values.  Use these as test values
-one_a = hash_pair(m_leaf_nodes[0], m_leaf_nodes[1])
-one_b = hash_pair(m_leaf_nodes[2], m_leaf_nodes[3])
-one_c = hash_pair(m_leaf_nodes[4], m_leaf_nodes[5])
-one_d = hash_pair(m_leaf_nodes[6], m_leaf_nodes[7])
+# # Create my own merkle tree.  Record hashed values.  Use these as test values
+# one_a = hash_pair(m_leaf_nodes[0], m_leaf_nodes[1])
+# one_b = hash_pair(m_leaf_nodes[2], m_leaf_nodes[3])
+# one_c = hash_pair(m_leaf_nodes[4], m_leaf_nodes[5])
+# one_d = hash_pair(m_leaf_nodes[6], m_leaf_nodes[7])
 # print(one_a, "\n", one_b, "\n", one_c, "\n", one_d)
 # print("\n")
 
-two_a = hash_pair(one_a, one_b)
-two_b = hash_pair(one_c, one_d)
+# two_a = hash_pair(one_a, one_b)
+# two_b = hash_pair(one_c, one_d)
 # print("Level two: ")
 # print(two_a, "\n", two_b)
 # print("\n")
 
-test_root = hash_pair(two_a, two_b)
-# print("Level 3: ")
-print("\n")
-print("Root: " + str(test_root))
+# test_root = hash_pair(two_a, two_b)
+# print("Manual Root: " + str(test_root))
 
 
-
-
-
-
-
-
-leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
-for i in range(len(leaf_nodes)):
-  leaf_nodes[i] = leaf_nodes[i].encode('utf-8')
-
-# Record the whole tree instead of errasing each level below 
-def naive_merkle_tree(nodes):
-  parent_nodes = [] 
-  if len(nodes) == 1:
-    print("\n") 
-    return 
-  for i in range(len(nodes)):
-    if i % 2 == 0: 
-      parent_node = hash_pair(nodes[i], nodes[i + 1])
-      parent_nodes.append(parent_node)
-  nodes = parent_nodes 
-  naive_merkle_tree(nodes) 
-  return
-
-# naive_merkle_tree(leaf_nodes)
-
-
-
-
-
-
-
-
-
-
-
-i_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
-for i in range(len(i_leaf_nodes)):
-  i_leaf_nodes[i] = i_leaf_nodes[i].encode('utf-8')
-
-# # count, value
-# for i, h in enumerate(current_sync_committee_branch):
-#   print(i, h)
 
 # Created my own index to check merkle proof
-def checkMerkleProof(leaf, root, branch, index):
+# I believe the index is going backwards
+def checkMerkleProof(leaf, root, branch, path):
   node_to_hash = leaf
-  for i in range(len(index)):                      
-    # Not sure which way you organize the left and right nodes for 0 and 1 bits 
-    if index[i] == 0:
+  hashed_node = 0
+  for i in range(len(branch)):                      
+    if path[i] == '0':
       hashed_node = hash_pair(node_to_hash, branch[i])
-    if index[i] == 1:
+    if path[i] == '1':
       hashed_node = hash_pair(branch[i], node_to_hash)
+    if(i == len(branch) - 1):
+      print("Trusted root: " + str(root)) 
+      print("Merkle Proof root: " + str(hashed_node))
+      return
     node_to_hash = hashed_node
-  
-  print("Merkle Proof root: " + str(node_to_hash))
-  print("Trusted root: " + str(root)) 
 
+# leaf = '0'.encode('utf-8')
+# leaf_pair = '1'.encode('utf-8')
+# root = b'\xad\x8d\xa1\xae_\x1c:\xef\x19}\x02\x80\xfb\xbf"\xd6\xf1\x12\xf2\x80_\xd0Xe1F\xbf\xb9:\xd9\xaf|'
+# branch = [leaf_pair, b'S_\xa3\r~%\xdd\x8aI\xf1SgysN\xc8(a\x08\xd1\x15\xdaPE\xd7\x7f;A\x85\xd8\xf7\x90', b'a#\x0e\x0fR\x14\xaa\x97\x87\xbfXZJ\x91\x1dQ\x93+\x15\xe8d\x85\xdb\xe7HZ\xfdt\xdf\xf5\x12\x02']  
+# Flipped binary path for now. Fix the function to go backwards later
+# path = "0001"
+
+# Hashed manually using branch
+#    1. leaf_hash == one_a
+# first_hash = hash_pair(leaf, branch[0])
+# second_hash = hash_pair(first_hash, branch[1])
+# third_hash = hash_pair(second_hash, branch[2])
+# print("Final Value: " + str(third_hash))
+
+# Hashed from function
+# checkMerkleProof(leaf, test_root, branch, path)
+
+
+#                                             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#                                             ===============================
+#                                                 MERKLE ROOT TESTING ZONE
+#                                             ===============================
+#                                             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+# See if the merkle root I get from hashing this manually is the same as below
+
+
+
+
+
+
+
+
+
+# leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
+# for i in range(len(leaf_nodes)):
+#   leaf_nodes[i] = leaf_nodes[i].encode('utf-8')
+
+# # Record the whole tree instead of errasing each level below 
+# def naive_merkle_tree(nodes):
+#   parent_nodes = [] 
+#   if len(nodes) == 1:
+#     print("\n") 
+#     print("Function root: " + str(nodes))
+#     return 
+#   for i in range(len(nodes)):
+#     if i % 2 == 0: 
+#       parent_node = hash_pair(nodes[i], nodes[i + 1])
+#       parent_nodes.append(parent_node)
+#   nodes = parent_nodes 
+#   naive_merkle_tree(nodes) 
+#   return
+
+# function_root = naive_merkle_tree(leaf_nodes)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# i_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
+# for i in range(len(i_leaf_nodes)):
+#   i_leaf_nodes[i] = i_leaf_nodes[i].encode('utf-8')
+
+
+
+# ===============================================================
+# Create a function that gives a list of each possible path given 
+# number of nodes.  There are only 8 options here!
+# ===============================================================
+# int_leaf_nodes = [1, 2, 3, 4, 5, 6, 7, 8]
+
+# binary_index_options = []
+# for i in range(len(int_leaf_nodes)):
+#   binary_index_options.append(int_to_binary(int_leaf_nodes[i])) 
+# print(binary_index_options)
 
 
 # Use index, witness, and leaf to get to the root!
 # Find:    root of i_leaf_nodes[5]          ( == b'4)
+# witness = [i_leaf_nodes[5], one_d, two_a]
 
-witness = [i_leaf_nodes[5], one_d, two_a]
-index = [0, 0, 1]
-leaf = i_leaf_nodes[4]
+# I believe the index is backwards
+# index = [0, 0, 1]
+# leaf = i_leaf_nodes[4]
 # Manually instantiate witness
 # print(witness)
 
+# ==========================
+# CYCLE THROUGH EACH OPTION!
+# ==========================
 
-checkMerkleProof(leaf, test_root, witness, index)
+# for i in range(len(int_leaf_nodes)):
+#   checkMerkleProof(leaf, test_root, witness, int_leaf_nodes[i])
 
 
 
@@ -137,11 +176,32 @@ checkMerkleProof(leaf, test_root, witness, index)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #     !!!!!!!!!!!! 
 #     EXTRA CREDIT
 #     !!!!!!!!!!!!
-
-
 
 #  Functions were implemented for me automatically.  Make 'em from scratch!
 #
@@ -157,11 +217,6 @@ checkMerkleProof(leaf, test_root, witness, index)
 # def merkleizeSyncCommittee(sync_committee):
 #   hash_tree_root = hash(sync_committee)
 #   return hash_tree_root
-
-
-
-
-
 # # Make the merkle proof validating function from scratch! Fuck the noise.
 
 # def validateMerkleProof(sync_committee, merkle_branch, checkpoint_root):
