@@ -50,7 +50,7 @@ def hash_pair(left, right):
 
 
 # Created my own index to check merkle proof
-def checkMerkleProof(leaf, root, branch, path):
+def checkMerkleProof(leaf, branch, path):
   node_to_hash = leaf
   hashed_node = 0
   for i in range(len(branch)):                      
@@ -59,7 +59,6 @@ def checkMerkleProof(leaf, root, branch, path):
     if path[i] == '1':
       hashed_node = hash_pair(branch[i], node_to_hash)
     if(i == len(branch) - 1):
-      print("Trusted root: " + str(root)) 
       print("Merkle Proof root: " + str(hashed_node))
       return
     node_to_hash = hashed_node

@@ -68,9 +68,9 @@ if __name__ == "__main__":
   checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
   checkpoint = callsAPI(checkpoint_url)
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
-
+  
   # SNAPSHOT-
-  snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0x6b1a3fd7565d41ae1860d976e836842c71f9aee7aeada03ca1e4abf1dd789aef" 
+  snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0xb2755c41cc960f764e791f5e7df7e435136d23b3ec3550a44240254ad8be5879" 
   snapshot = callsAPI(snapshot_url)
   header_state_root = snapshot['data']['header']['state_root']
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
@@ -128,22 +128,10 @@ if __name__ == "__main__":
   path = '011011' 
   
   # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
-  checkMerkleProof(sync_committee_root, header_state_root, current_sync_committee_branch, path)
+  assert checkMerkleProof(sync_committee_root, current_sync_committee_branch, path) == header_state_root
   
   # I have officially verified the merkle proof!
   
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   #                                  \\\\\\\\\\\\\\\\\\\   |||   ////////////////////
@@ -153,6 +141,31 @@ if __name__ == "__main__":
   #                                   ==============================================
   #                                   ///////////////////   |   \\\\\\\\\\\\\\\\\\\\
   #                                  ///////////////////   |||   \\\\\\\\\\\\\\\\\\\\
+
+
+  # "The light client stores the snapshot and fetches committee updates until it reaches the latest sync period."
+  
+  # Snapshot contains:
+  # class LightClientSnapshot(Container):
+  #     # Beacon block header
+  #     header: BeaconBlockHeader
+  #     # Sync committees corresponding to the header
+  #     current_sync_committee: SyncCommittee
+  #     next_sync_committee: SyncCommittee 
+  #  
+  # Call lightclient/committee_updates to get committee updates from that period to the current period
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
