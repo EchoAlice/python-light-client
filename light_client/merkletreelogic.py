@@ -30,23 +30,9 @@ def hash_pair(left, right):
 # test_root = hash_pair(two_a, two_b)
 # print("Manual Root: " + str(test_root))
 
-
-
-# Created my own index to check merkle proof
-# I believe the index is going backwards
-def checkMerkleProof(leaf, root, branch, path):
-  node_to_hash = leaf
-  hashed_node = 0
-  for i in range(len(branch)):                      
-    if path[i] == '0':
-      hashed_node = hash_pair(node_to_hash, branch[i])
-    if path[i] == '1':
-      hashed_node = hash_pair(branch[i], node_to_hash)
-    if(i == len(branch) - 1):
-      print("Trusted root: " + str(root)) 
-      print("Merkle Proof root: " + str(hashed_node))
-      return
-    node_to_hash = hashed_node
+#   ===================
+#   MANUAL INDEX VALUES
+#   ===================
 
 # leaf = '0'.encode('utf-8')
 # leaf_pair = '1'.encode('utf-8')
@@ -62,31 +48,31 @@ def checkMerkleProof(leaf, root, branch, path):
 # third_hash = hash_pair(second_hash, branch[2])
 # print("Final Value: " + str(third_hash))
 
-# Hashed from function
-# checkMerkleProof(leaf, test_root, branch, path)
 
-
-#                                             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#                                             ===============================
-#                                                 MERKLE ROOT TESTING ZONE
-#                                             ===============================
-#                                             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-# See if the merkle root I get from hashing this manually is the same as below
-
-
-
-
-
+# Created my own index to check merkle proof
+def checkMerkleProof(leaf, root, branch, path):
+  node_to_hash = leaf
+  hashed_node = 0
+  for i in range(len(branch)):                      
+    if path[i] == '0':
+      hashed_node = hash_pair(node_to_hash, branch[i])
+    if path[i] == '1':
+      hashed_node = hash_pair(branch[i], node_to_hash)
+    if(i == len(branch) - 1):
+      print("Trusted root: " + str(root)) 
+      print("Merkle Proof root: " + str(hashed_node))
+      return
+    node_to_hash = hashed_node
 
 
 
 
-# leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
-# for i in range(len(leaf_nodes)):
-#   leaf_nodes[i] = leaf_nodes[i].encode('utf-8')
+
+
+
+#     !!!!!!!!!!!! 
+#     EXTRA CREDIT
+#     !!!!!!!!!!!!
 
 # # Record the whole tree instead of errasing each level below 
 # def naive_merkle_tree(nodes):
@@ -106,102 +92,6 @@ def checkMerkleProof(leaf, root, branch, path):
 # function_root = naive_merkle_tree(leaf_nodes)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-# i_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
-# for i in range(len(i_leaf_nodes)):
-#   i_leaf_nodes[i] = i_leaf_nodes[i].encode('utf-8')
-
-
-
-# ===============================================================
-# Create a function that gives a list of each possible path given 
-# number of nodes.  There are only 8 options here!
-# ===============================================================
-# int_leaf_nodes = [1, 2, 3, 4, 5, 6, 7, 8]
-
-# binary_index_options = []
-# for i in range(len(int_leaf_nodes)):
-#   binary_index_options.append(int_to_binary(int_leaf_nodes[i])) 
-# print(binary_index_options)
-
-
-# Use index, witness, and leaf to get to the root!
-# Find:    root of i_leaf_nodes[5]          ( == b'4)
-# witness = [i_leaf_nodes[5], one_d, two_a]
-
-# I believe the index is backwards
-# index = [0, 0, 1]
-# leaf = i_leaf_nodes[4]
-# Manually instantiate witness
-# print(witness)
-
-# ==========================
-# CYCLE THROUGH EACH OPTION!
-# ==========================
-
-# for i in range(len(int_leaf_nodes)):
-#   checkMerkleProof(leaf, test_root, witness, int_leaf_nodes[i])
-
-
-
-# Debugging index
-
-# first_hash = hash_pair(i_leaf_nodes[4], witness[0])
-# print("\n")
-# print("First hash: " + str(first_hash))
-# print("left: " + str(i_leaf_nodes[4]))
-# print("right: " + str(witness[0]))
-# print("\n")
-
-# print("One C: " + str(one_c))
-# print("left: " + str(m_leaf_nodes[4]))
-# print("right: " + str(m_leaf_nodes[5]))
-# print("\n")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#     !!!!!!!!!!!! 
-#     EXTRA CREDIT
-#     !!!!!!!!!!!!
 
 #  Functions were implemented for me automatically.  Make 'em from scratch!
 #
