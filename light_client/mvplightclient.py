@@ -1,10 +1,6 @@
-from email import header
-from msilib.schema import Binary
 import requests
-from remerkleable.basic import uint64, boolean
-from remerkleable.core import View, Path
-from containers import BeaconBlockHeader, SyncCommittee
-from merkleproof import calculate_merkle_root, get_generalized_index, get_generalized_index_bit
+from remerkleable.core import View
+from containers import SyncCommittee
 from merkletreelogic import checkMerkleProof 
 
 
