@@ -1,8 +1,12 @@
+from email import header
+from msilib.schema import Binary
 import requests
-from remerkleable.basic import uint64
-from remerkleable.core import View
+from remerkleable.basic import uint64, boolean
+from remerkleable.core import View, Path
 from containers import BeaconBlockHeader, SyncCommittee
-from merkletreelogic import checkMerkleProof
+from merkleproof import calculate_merkle_root, get_generalized_index, get_generalized_index_bit
+from merkletreelogic import checkMerkleProof 
+
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def callsAPI(url):
@@ -15,6 +19,12 @@ def parseHexToByte(hex_string):
     hex_string = hex_string[2:]
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
+
+def index_to_path(index):
+  path = bin(index)
+  if path[:2] == '0b':
+    path = path[2:]
+  return path
 
 if __name__ == "__main__":
   #                                    
@@ -72,14 +82,11 @@ if __name__ == "__main__":
   hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
   current_sync_committee_branch = snapshot['data']['current_sync_committee_branch']
 
-  # ----------------------------------------
-  # PARSE JSON INFORMATION FROM HEX TO BYTES
-  # ----------------------------------------
 
-  # #   CHECKPOINT-
-  # finalized_checkpoint_root =  parseHexToByte(finalized_checkpoint_root)
+  # ----------------------------------------------------------
+  # PARSE JSON INFORMATION ON SYNC COMMITTEE FROM HEX TO BYTES
+  # ----------------------------------------------------------
 
-  #   SYNC COMMITTEE- 
   #       Aggregate Key and Header State Root
   current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
   header_state_root = parseHexToByte(header_state_root)
@@ -92,76 +99,71 @@ if __name__ == "__main__":
   for i in range(len(current_sync_committee_branch)):
     current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
 
-  # ------------------
-  # CREATE SSZ OBJECT
-  # ------------------
+  # ----------------------------
+  # CREATE SYNC COMMITTEE OBJECT
+  # ----------------------------
 
-  # SyncCommittee
   current_sync_committee = SyncCommittee(
     pubkeys = list_of_keys,
     aggregate_pubkey = current_aggregate_pubkey
   )
 
-  #--------------------------------------------
-  # MERKLEIZE SYNC ROOT AND VERIFY MERKLE PROOF  
-  #--------------------------------------------
-  
-  sync_committee_root = View.hash_tree_root(current_sync_committee) 
-  # checkMerkleProof(sync_committee_root, finalized_checkpoint_root, current_sync_committee_branch)
-  checkMerkleProof(sync_committee_root, header_state_root, current_sync_committee_branch)
-  
+
+
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   # =================================================
   # STEP 2: Verify Merkle branch from sync committee
   # =================================================
   # /////////////////////////////////////////////////
 
-  # 
-  #  Merkleize the sync committee object, then hash it against the merkle branch
-  #  If the output matches the hash_tree_root(beacon block header)... Yaaaay 
-
   # -----------------------------------
   # MERKLEIZE THE SYNC COMMITTEE OBJECT
   # -----------------------------------
-
-  # beacon_block_header_root = View.hash_tree_root(beacon_block_header) 
-  sync_committee_root = View.hash_tree_root(current_sync_committee) 
-  # This was too easy.  Do this myself!!!
-  # merkleizeSyncCommittee(current_sync_committee)
   
+  # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
+  sync_committee_root = View.hash_tree_root(current_sync_committee) 
+   
   # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
   # -----------------------------------
 
-  # Check proof function works, BUT the values still aren't matching up
-  # Am I comparing this hashed value to the wrong hash_tree_root?
-  # The answer isn't just to hash tree root the checkpoint container
-  #
-  # 2^5 == 32 <--- number of nodes in the merkle tree that proves hash_tree_root(BeaconState).   
-  # This is the number of nodes needed to create a merkle tree for BeaconState 
-  #
-  # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
+  index = 54
+  # 54 in binary, flipped around 
+  path = '011011' 
+  
+  checkMerkleProof(sync_committee_root, header_state_root, current_sync_committee_branch, path)
+  # I have officially verified the merkle proof!
 
-  # checkMerkleProof(beacon_block_header_root, sync_committee_root, current_sync_committee_branch)
-  # checkMerkleProof(sync_committee_root, finalized_checkpoint_root, current_sync_committee_branch)
-
-
-
-  #                                     \\\\\\\\\\\\\\\\\\\   |||   ////////////////////
-  #                                      \\\\\\\\\\\\\\\\\\\   |   ////////////////////
-  #                                      ==============================================
-  #                                      GET COMMITTEE UPDATES UP UNTIL CURRENT PERIOD:
-  #                                      ==============================================
-  #                                      ///////////////////   |   \\\\\\\\\\\\\\\\\\\\
-  #                                     ///////////////////   |||   \\\\\\\\\\\\\\\\\\\\
+  
 
 
 
 
-  #                                       \\\\\\\\\\\\\\\\\\\ || ////////////////////
-  #                                        \\\\\\\\\\\\\\\\\\\  ////////////////////
-  #                                        ========================================
-  #                                        SYNC TO THE LATEST FINALIZED CHECKPOINT:
-  #                                        ========================================
-  #                                        ///////////////////  \\\\\\\\\\\\\\\\\\\\
-  #                                       /////////////////// || \\\\\\\\\\\\\\\\\\\\
+
+
+
+
+
+
+
+
+
+
+  #                                  \\\\\\\\\\\\\\\\\\\   |||   ////////////////////
+  #                                   \\\\\\\\\\\\\\\\\\\   |   ////////////////////
+  #                                   ==============================================
+  #                                   GET COMMITTEE UPDATES UP UNTIL CURRENT PERIOD:
+  #                                   ==============================================
+  #                                   ///////////////////   |   \\\\\\\\\\\\\\\\\\\\
+  #                                  ///////////////////   |||   \\\\\\\\\\\\\\\\\\\\
+
+
+
+
+  #                                   \\\\\\\\\\\\\\\\\\\ || ////////////////////
+  #                                    \\\\\\\\\\\\\\\\\\\  ////////////////////
+  #                                    ========================================
+  #                                    SYNC TO THE LATEST FINALIZED CHECKPOINT:
+  #                                    ========================================
+  #                                    ///////////////////  \\\\\\\\\\\\\\\\\\\\
+  #                                   /////////////////// || \\\\\\\\\\\\\\\\\\\\
