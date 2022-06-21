@@ -8,6 +8,8 @@ Bytes32 = Vector[byte, 32]
 Bytes48 = Vector[byte, 48]
 Bytes96 = Vector[byte, 96]
 
+
+# Data type.      Maybe this should be a Vector? idk
 # Define custom types (aka alliases):
 Slot = uint64
 Epoch = uint64
@@ -29,8 +31,6 @@ SYNC_COMMITTEE_SIZE = 512
 #
 # FINALIZED_ROOT_INDEX = get_generalized_index(BeaconState, 'finalized_checkpoint', 'root')
 # NEXT_SYNC_COMMITTEE_INDEX = get_generalized_index(BeaconState, 'next_sync_committee')
-
-# Containers - A Container class can be described as a special component that can hold the gathering of the components.
 
 # If all goes well, we'll update our light client memory with this header
 # The header is the key trusted piece of data we use to verify merkle proofs against.

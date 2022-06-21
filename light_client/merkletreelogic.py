@@ -59,8 +59,7 @@ def checkMerkleProof(leaf, branch, path):
     if path[i] == '1':
       hashed_node = hash_pair(branch[i], node_to_hash)
     if(i == len(branch) - 1):
-      print("Merkle Proof root: " + str(hashed_node))
-      return
+      return hashed_node
     node_to_hash = hashed_node
 
 

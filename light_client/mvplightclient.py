@@ -129,9 +129,7 @@ if __name__ == "__main__":
   
   # Compare hashed answer to the BEACON STATE ROOT that the sync committee is a part of!
   assert checkMerkleProof(sync_committee_root, current_sync_committee_branch, path) == header_state_root
-  
-  # I have officially verified the merkle proof!
-  
+  print("I have officially verified the merkle proof!")  
 
 
   #                                  \\\\\\\\\\\\\\\\\\\   |||   ////////////////////
@@ -144,7 +142,9 @@ if __name__ == "__main__":
 
 
   # "The light client stores the snapshot and fetches committee updates until it reaches the latest sync period."
-  
+  # In the newest mvp light client spec the LightClientSnapshot doesn't exist.  
+  # It's just a part of the light client store object
+  # 
   # Snapshot contains:
   # class LightClientSnapshot(Container):
   #     # Beacon block header
@@ -156,6 +156,9 @@ if __name__ == "__main__":
   # Call lightclient/committee_updates to get committee updates from that period to the current period
 
 
+  
+  # Figure out what all I need to store in the LightClientStore Container
+  # Do I need to have light client store container initialized first? 
 
 
 
