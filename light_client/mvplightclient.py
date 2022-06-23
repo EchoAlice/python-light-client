@@ -78,12 +78,12 @@ if __name__ == "__main__":
   snapshot = callsAPI(snapshot_url)
   
   #  Block Header Data
-  header_slot =
-  header_proposer_index =
-  header_parent_root =
+  header_slot = int(snapshot['data']['header']['slot'])
+  header_proposer_index = int(snapshot['data']['header']['proposer_index'])
+  header_parent_root = snapshot['data']['header']['parent_root']
   header_state_root = snapshot['data']['header']['state_root']
-  header_body_root =
-  
+  header_body_root = snapshot['data']['header']['body_root']
+
   #  Sync Committee Data
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
   hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
@@ -94,10 +94,12 @@ if __name__ == "__main__":
   # PARSE JSON INFORMATION ON BLOCK_HEADER AND SYNC_COMMITTEE
   # ---------------------------------------------------------
 
-  #       Aggregate Key and Header State Root
+  #       Aggregate Key and Header Roots
   current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
+  header_parent_root = parseHexToByte(header_parent_root)
   header_state_root = parseHexToByte(header_state_root)
-  
+  header_body_root = parseHexToByte(header_body_root)
+
   #       List of Keys 
   for i in range(len(list_of_keys)):
     list_of_keys[i] = parseHexToByte(list_of_keys[i])
@@ -136,7 +138,7 @@ if __name__ == "__main__":
   # Converts the sync committee object into a merkle root
   # -----------------------------------------------------
 
-
+  block_header_root =  View.hash_tree_root(current_block_header)
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
 
   # -----------------------------------
@@ -149,8 +151,11 @@ if __name__ == "__main__":
   
   # Compare hashed answer to the BEACON BLOCK STATE ROOT that the sync committee is a part of!
   assert checkMerkleProof(sync_committee_root, current_sync_committee_branch, path) == header_state_root
-  
-  
+
+
+
+  # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now 
+  # print("Tahhhh daaaahh") 
   #                                  \\\\\\\\\\\\\\\\\\\   |||   ////////////////////
   #                                   \\\\\\\\\\\\\\\\\\\   |   ////////////////////
   #                                   ==============================================
@@ -362,9 +367,9 @@ if __name__ == "__main__":
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/committee_updates?from=499&to=500" 
   committee_updates = callsAPI(committee_updates_url)
-  print("\n") 
-  print("Committee_updates: ") 
-  print(committee_updates)
+  # print("\n") 
+  # print("Committee_updates: ") 
+  # print(committee_updates)
    
   # Committee update gives you...
   # 
