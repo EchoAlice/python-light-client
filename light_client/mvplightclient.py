@@ -152,6 +152,12 @@ if __name__ == "__main__":
   # Compare hashed answer to the BEACON BLOCK STATE ROOT that the sync committee is a part of!
   assert checkMerkleProof(sync_committee_root, current_sync_committee_branch, path) == header_state_root
 
+  print("block_header_root: ") 
+  print(block_header_root)
+  print("\n") 
+  checkpoint_in_question = '0xe7ec5a97896da6166bb56b89f9fcb426e13b620b1587dbedda258fd4faa00ab5'
+  checkpoint_in_question = parseHexToByte(checkpoint_in_question)
+  print(checkpoint_in_question)
 
 
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now 
