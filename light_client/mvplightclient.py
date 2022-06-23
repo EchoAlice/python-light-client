@@ -1,7 +1,6 @@
-from email import header
 import requests
 from remerkleable.core import View
-from containers import SyncCommittee
+from containers import BeaconBlockHeader, SyncCommittee
 from merkletreelogic import checkMerkleProof 
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
@@ -65,24 +64,35 @@ if __name__ == "__main__":
   # MAKE API CALLS FOR CHECKPOINT AND SNAPSHOT
   # ------------------------------------------
 
-  # CHECKPOINT-
+  #  ==========
+  #  CHECKPOINT
+  #  ==========
   checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
   checkpoint = callsAPI(checkpoint_url)
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
-
-  # SNAPSHOT-
+  
+  #  =========
+  #  SNAPSHOT
+  #  =========
   snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0xe7ec5a97896da6166bb56b89f9fcb426e13b620b1587dbedda258fd4faa00ab5" 
   snapshot = callsAPI(snapshot_url)
-  print(snapshot) 
+  
+  #  Block Header Data
+  header_slot =
+  header_proposer_index =
+  header_parent_root =
   header_state_root = snapshot['data']['header']['state_root']
+  header_body_root =
+  
+  #  Sync Committee Data
   list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
   hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
   current_sync_committee_branch = snapshot['data']['current_sync_committee_branch']
 
 
-  # ----------------------------------------------------------
-  # PARSE JSON INFORMATION ON SYNC COMMITTEE FROM HEX TO BYTES
-  # ----------------------------------------------------------
+  # ---------------------------------------------------------
+  # PARSE JSON INFORMATION ON BLOCK_HEADER AND SYNC_COMMITTEE
+  # ---------------------------------------------------------
 
   #       Aggregate Key and Header State Root
   current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
@@ -96,9 +106,16 @@ if __name__ == "__main__":
   for i in range(len(current_sync_committee_branch)):
     current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
 
-  # ----------------------------
-  # CREATE SYNC COMMITTEE OBJECT
-  # ----------------------------
+  # ----------------------------------------------
+  # CREATE BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
+  # ----------------------------------------------
+  current_block_header =  BeaconBlockHeader(
+    slot = header_slot, 
+    proposer_index = header_proposer_index, 
+    parent_root = header_parent_root,
+    state_root = header_state_root,
+    body_root = header_body_root
+  )
 
   current_sync_committee = SyncCommittee(
     pubkeys = list_of_keys,
@@ -114,13 +131,14 @@ if __name__ == "__main__":
   # /////////////////////////////////////////////////
 
   # -----------------------------------------------------
-  #         MERKLEIZE THE SYNC COMMITTEE OBJECT
+  #                MERKLEIZE THE OBJECTS
   #
   # Converts the sync committee object into a merkle root
   # -----------------------------------------------------
-  
+
+
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
-  
+
   # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
   # -----------------------------------
@@ -194,13 +212,23 @@ if __name__ == "__main__":
 
 
 
-
+  # /////////////////////////////////////////////////////////////
   # =============================================================
   # Compare values between the snapshot and the committee updates             (Make pretty program comparing bytes in containers later)
   # =============================================================
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  # 
+  #
   #                                                            Merkleizing this beacon block header (should) give you the finalized block root. 
-  # Snapshot Beacon Block header:                              Finalized block root --->    root: 0xe7ec5a97896da6166bb56b89f9fcb426e13b620b1587dbedda258fd4faa00ab5  
-  #            slot: 4090208                                                                       epoch: 127819 
+  #                                                            Finalized block root --->    root: 0xe7ec5a97896da6166bb56b89f9fcb426e13b620b1587dbedda258fd4faa00ab5  
+  #                                                                                         epoch: 127819 
+  # 
+  #
+  #                                                   ============
+  #                                                   PERIOD:  499                         <----  snapshot_sync_period = 4090208 // 8192         
+  #                                                   ============
+  # Snapshot Beacon Block header:                                
+  #            slot: 4090208                                                                        
   #            proposer_index: 169657
   #            parent_root: 0x9509dd922c5627b4580f32ae4fbdff01b987b84be1b217d9fce5106dd1b02bb5
   #            state_root: 0xf4f0a5782f3cac46abc52441e32e960e31307a3144120223d83833c110ef5aa5                
@@ -217,42 +245,109 @@ if __name__ == "__main__":
   #                                             '0xd03297844f949c061d54184b78608b07a0ef6c3d44966a9848c8d3e9f8862174']
 
 
-  # Current sync period:                        (Based off of snapshot slot number)
-  # sync_period = 4090208 // 8192                 # Period: 499
-  # print(sync_period)
 
-  #                                    Check tomorrow if committee update holds true.  DON'T UPDATE CHECKKPOINT ROOT!
+
+  # Difference between snapshot and 
+  # committee update attested block header:                             
+  # 4090208 - 4088549  = 1659                             ...Feels arbitrary
+
+
+
+
 
   # I believe "from" serves last information from a specified period
   # while "to" serves the first information from a specified period.
 
-  
+
+
+  #                                                   ============
+  #                                                   PERIOD:  499                         <----           attested_header_committee_update = 4088549 // 8192
+  #                                                   ============
   #     Committee Update Attested Block header():                 
-  #            slot:
-  #            proposer_index:
-  #            parent_root:
-  #            state_root:
-  #            body_root:
+  #            slot: 4088549
+  #            proposer_index:  363243
+  #            parent_root:  0x25feb7de799df84b9a322a30363140f484f5d71c67657cebbeaa672b762fd0b8
+  #            state_root:  0x12ee41d13b6331070297163a9348c4248e620c0f72a4c14d63e60826bad2d492
+  #            body_root:  0x89a724e8ead4f0058f2f543e19469e4340ee5cbd9cf1ad480f9d448d23dfecff
   #
   #     SyncCommittee():   
   #            next_sync_committee: pubkeys[]
-  #            aggregate_pubkey:
-  #     next_sync_committee_branch:
+  #            aggregate_pubkey:   0x8f56f5731e74702f20c29240f4706662cfbc3e003359592a792c68704700d4cf4b63eb76b1e571cefd8aaec3f0ccf972
+  #     next_sync_committee_branch:  ['0x152456a0396e4e57f4d93b3d746e5295faaa744d6426772bd185427499e65f68', 
+  #                                   '0xe86e77b209c622ba5cf73e5dc147fe4064cc869022aa750b4bc13b564824ffc2', 
+  #                                   '0x1f64c0c5cf6e8bb403bb55085b03903ce4054fbbe7b51ea6c929e2c53432f357', 
+  #                                   '0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c', 
+  #                                   '0x717da9e060636db4d7827af544116e805325a9fe84ee69b278b8e89c45701ef6']
   #
-  #     Finalized Block header(): 
-  #            slot:
-  #            proposer_index:
-  #            parent_root:
-  #            state_root:
-  #            body_root:
+  #
+  #     Finalized Block header():                   ~ Same period ~ 
+  #            slot: 4088480
+  #            proposer_index:  280599
+  #            parent_root:  0xee77ad7b118621652d887107acf4ce75004d41c490218a5ce3af4dc048ed4eca
+  #            state_root:   0x59531ed8dc5cc5a09c2b4942df3a8f64d90e911938ff4b0497fbc054f6cd2383
+  #            body_root:   0x14157a187a5f89f0b4d053eb411dd6d786f2123a677043742d1aa2ab6717910f
   # 
-  #     finality_branch:
+  #     finality_branch:              ['0x15f3010000000000000000000000000000000000000000000000000000000000', 
+  #                                    '0x9ce6b6b3c47bd19f386dc0e069466d6a5b545c933bd02a6105558c37d032156d', 
+  #                                    '0x735bbf79e46e392630d98b2f7dc93ca23e9067d8bd689eeabb0cf9c498c59960', 
+  #                                    '0xd7ee1b5499dbe7a3d120917a75386dea0dd5c09feff600019aba9b6da8fbf9bf',
+  #                                    '0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c',
+  #                                    '0x60810812caba398c56e244608ec5b2c354da8949ed85f4d353f74bd628e7ec07']
   #
   #     sync_aggregate:
-  #            sync_committee_bits:
-  #            sync_committee_signature:
-  #     fork_version:          
+  #            sync_committee_bits:  0xffffffffffffffffffffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+  #            sync_committee_signature:  0xabdc4eeede5ae7ccb4b2c274dc3880c4c532bc85009726c042c3958f231ee212e8a215c39e3500b969f7a78af512aada05302a528cd9cf467dca64c0225907a315d30ceffa476a8976f5422e02954c4267f547a989a2c0251358ec4a514a8a6b
+  #     fork_version: 0x01000000         
   #
+  
+  
+  #                                                   ============
+  #                                                   PERIOD:  500                          <----           attested_header_committee_update = 4096341 // 8192
+  #                                                   ============
+  #     Attested Block header():          
+  #            slot:  4096341
+  #            proposer_index:  232694
+  #            parent_root:  0xd79c776e8a397662caa120ebc551a7386f6a6c3b9c1d9701e0445ca723960ada
+  #            state_root:  0x4e0a3e83021bee33b74f22799e3950941cef48d01a8c80cd277ad8ad155db12f                     
+  #            body_root:  0x09c2005b4737a29d933e9b59d8c3f8fd3fbdbef6a07abbe2b6a3cb58c77dd931
+  #
+  #     SyncCommittee():   
+  #            next_sync_committee: pubkeys[]
+  #            aggregate_pubkey:  0x97e29f45b379816b7bd6d132975be014b01128bc8349e4e24018618bcd0a17e3bc1844f05eb5f52f7d7a1eba91705e93
+  #  
+  #     next_sync_committee_branch:   ['0x0ba8314228d581dff1a3c6dd3cfb56613127ffd33953bfdb9bd7aac80aa283b0',
+  #                                    '0x36a7ef9ed083ebcb6c5056e8db15901e062c2889ae93cb156c1d015f8145c231', 
+  #                                    '0x227a14c446a5789da5bd8ad0f769f04e5a2789fbd2201e1187d4e3b2ad8b86e1', 
+  #                                    '0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c', 
+  #                                    '0x28b2aacd237776b49d039508a49b833486ab9bcc57c8cab45ce7d6c25975cf70']
+  #
+  #     Finalized Block header():                    
+  #            slot:  4096256
+  #            proposer_index:  347342
+  #            parent_root:  0x6b7872e0208b5884f3a26a45e67d52043548fc631835913b126fd8e7d1f07485
+  #            state_root:  0xf8f063d1927e9ca28afc39c03ca18b5d83c13acd841c7e1c49d4e4b36a0d5f3a
+  #            body_root:  0x8c7e9298dd0facb26dcd6149e8add152ea088b07dad083414ac6e920f4cd331a
+  # 
+  #     finality_branch:  ['0x08f4010000000000000000000000000000000000000000000000000000000000',
+  #                        '0x970a49db40b2da18f9ff2f7a687288f623a0d5d425f92e22ef12a8c41177c505', 
+  #                        '0x851f7972d98854453c3fc72082be68d727e4eba0f9d56bb17a9023c1d67e8037', 
+  #                        '0x71eff478cc51e973c7114c0264f37258b7645aa448745dc9273cb94273f5b6ac',
+  #                        '0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c', 
+  #                        '0xbe5ff7265537bd15a499312ea447e8419aa7fd31972e2ca976c81712266cea9e']
+  #
+  #     sync_aggregate:
+  #            sync_committee_bits:   0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+  #            sync_committee_signature:   0xa3d6cf7750cf7904990cac72e8075446febd080b06922099590d2abe8930c68a57513e6b1582390931ac122ef801de340f71d65d3eeb196358af052527a14e81be711512acd704833699486e18cc50feb589fe75652aaf0925037331b7116683
+  #     fork_version:  0x01000000        
+
+
+
+
+
+
+
+
+
 
 
 
@@ -336,18 +431,8 @@ if __name__ == "__main__":
 
 
   # # What periods do I sync from?
-  # committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/committee_updates?from=497&to=498" 
-  # committee_updates = callsAPI(committee_updates_url)
-  # # print(committee_updates)
+  
   # committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
-  # # Snapshot 
-  # #    'slot': '4075744'
-  # # Committee_updates: 
-  # #    'slot': '4071629'
-
-  # # Sync period:
-  # sync_period = 4075744 // 8192
-  # print(sync_period)
   
   
   
@@ -365,8 +450,6 @@ if __name__ == "__main__":
   # committee_updates_parent_root = committee_updates['data'][0]['attested_header']['parent_root']
   # print("Committee update parent root: " + str(committee_updates_parent_root)) 
 
-  # # next_list_keys = "dummy" 
-  # # next_aggregate_pubkey = "dummy" 
   
   # # # Call lightclient/committee_updates to get committee updates from that period to the current period
   # # next_sync_committee = SyncCommittee(
