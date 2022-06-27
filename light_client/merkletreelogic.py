@@ -1,12 +1,19 @@
+from tabnanny import check
 from eth2spec.utils.hash_function import hash
 
 def hash_pair(left, right):
   parent_node = hash(left + right)
   return parent_node
 
-#   ========================
-#   TEST MERKLE TREE VALUES!
-#   ========================
+def index_to_path(index):
+  path = bin(index)
+  if path[:2] == '0b':
+    path = path[2:]
+  return path
+
+  # ========================
+  # TEST MERKLE TREE VALUES!
+  # ========================
 
 # # Encodes manual merkle leaves into bytes
 # m_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
@@ -34,12 +41,11 @@ def hash_pair(left, right):
 #   MANUAL INDEX VALUES
 #   ===================
 
-# leaf = '0'.encode('utf-8')
-# leaf_pair = '1'.encode('utf-8')
-# root = b'\xad\x8d\xa1\xae_\x1c:\xef\x19}\x02\x80\xfb\xbf"\xd6\xf1\x12\xf2\x80_\xd0Xe1F\xbf\xb9:\xd9\xaf|'
-# branch = [leaf_pair, b'S_\xa3\r~%\xdd\x8aI\xf1SgysN\xc8(a\x08\xd1\x15\xdaPE\xd7\x7f;A\x85\xd8\xf7\x90', b'a#\x0e\x0fR\x14\xaa\x97\x87\xbfXZJ\x91\x1dQ\x93+\x15\xe8d\x85\xdb\xe7HZ\xfdt\xdf\xf5\x12\x02']  
-# Flipped binary path for now. Fix the function to go backwards later
-# path = "0001"
+leaf = '0'.encode('utf-8')
+leaf_pair = '1'.encode('utf-8')
+root = b'\xad\x8d\xa1\xae_\x1c:\xef\x19}\x02\x80\xfb\xbf"\xd6\xf1\x12\xf2\x80_\xd0Xe1F\xbf\xb9:\xd9\xaf|'
+branch = [leaf_pair, b'S_\xa3\r~%\xdd\x8aI\xf1SgysN\xc8(a\x08\xd1\x15\xdaPE\xd7\x7f;A\x85\xd8\xf7\x90', b'a#\x0e\x0fR\x14\xaa\x97\x87\xbfXZJ\x91\x1dQ\x93+\x15\xe8d\x85\xdb\xe7HZ\xfdt\xdf\xf5\x12\x02']  
+index = 8
 
 # Hashed manually using branch
 #    1. leaf_hash == one_a
@@ -49,15 +55,35 @@ def hash_pair(left, right):
 # print("Final Value: " + str(third_hash))
 
 
-# Created my own index to check merkle proof
-def checkMerkleProof(leaf, branch, path):
+
+
+# assert is_valid_merkle_branch(
+#     leaf=hash_tree_root(update.finalized_header),
+#     branch=update.finality_branch,
+#     depth=floorlog2(FINALIZED_ROOT_INDEX),
+#     index=get_subtree_index(FINALIZED_ROOT_INDEX),
+#     root=update.attested_header.state_root,
+# )
+
+# The function I've created doesn't take in the depth of the tree.  Is this a problem? 
+def is_valid_merkle_branch(leaf, branch, index, root):
   node_to_hash = leaf
   hashed_node = 0
-  for i in range(len(branch)):                      
+  path = index_to_path(index)
+  branch_index = 0 
+  # TRAVERSE THE PATH BACKWARDS!
+  for i in range(len(branch), 0, -1):                      
     if path[i] == '0':
-      hashed_node = hash_pair(node_to_hash, branch[i])
+      hashed_node = hash_pair(node_to_hash, branch[branch_index])
     if path[i] == '1':
-      hashed_node = hash_pair(branch[i], node_to_hash)
-    if(i == len(branch) - 1):
-      return hashed_node
+      hashed_node = hash_pair(branch[branch_index], node_to_hash)
+    if(i == 1):                                
+      if hashed_node == root: 
+        return True
+      else: 
+        return False
     node_to_hash = hashed_node
+    branch_index += 1
+
+assert is_valid_merkle_branch(leaf, branch, index, root)
+print("Wahoo")
