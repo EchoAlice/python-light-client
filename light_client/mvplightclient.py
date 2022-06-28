@@ -66,22 +66,22 @@ if __name__ == "__main__":
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
 
   #  =========
-  #  SNAPSHOT
+  #  BOOTSTRAP
   #  =========
-  snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x1669a323f2e9ddf8b918f959789428f1f5f588a8368b998ffc1d0d73d94d3f80" 
-  snapshot = callsAPI(snapshot_url)
+  bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x1669a323f2e9ddf8b918f959789428f1f5f588a8368b998ffc1d0d73d94d3f80" 
+  bootstrap = callsAPI(bootstrap_url)
   
   #  Block Header Data
-  header_slot = int(snapshot['data']['header']['slot'])
-  header_proposer_index = int(snapshot['data']['header']['proposer_index'])
-  header_parent_root = snapshot['data']['header']['parent_root']
-  header_state_root = snapshot['data']['header']['state_root']
-  header_body_root = snapshot['data']['header']['body_root']
+  header_slot = int(bootstrap['data']['header']['slot'])
+  header_proposer_index = int(bootstrap['data']['header']['proposer_index'])
+  header_parent_root = bootstrap['data']['header']['parent_root']
+  header_state_root = bootstrap['data']['header']['state_root']
+  header_body_root = bootstrap['data']['header']['body_root']
 
   #  Sync Committee Data
-  list_of_keys = snapshot['data']['current_sync_committee']['pubkeys']
-  hex_aggregate_pubkey = snapshot['data']['current_sync_committee']['aggregate_pubkey']
-  current_sync_committee_branch = snapshot['data']['current_sync_committee_branch']
+  list_of_keys = bootstrap['data']['current_sync_committee']['pubkeys']
+  hex_aggregate_pubkey = bootstrap['data']['current_sync_committee']['aggregate_pubkey']
+  current_sync_committee_branch = bootstrap['data']['current_sync_committee_branch']
 
   # ---------------------------------------------------------
   # PARSE JSON INFORMATION ON BLOCK_HEADER AND SYNC_COMMITTEE
@@ -145,17 +145,22 @@ if __name__ == "__main__":
   # HASH NODE AGAINST THE MERKLE BRANCH
   # -----------------------------------
 
+  #  Makes sure the current sync committee hashed against the branch is equivalent to the header state root.
+  #  However, all of this information was given to us from the same server.  Hash the information given to us 
+  #  (each attribute in BeaconBlockHeader(Container)) against the trusted, finalized checkpoint root to make sure
+  #  server serving the bootstrap information for a specified checkpoint root wasn't lying.
   
   assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, current_committee_index, header_state_root) 
-  # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now 
-  print("Tahhhh daaaahh") 
+  # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
+  #                                                                 api call to contain variable checkpoint 
   
   # print("block_header_root: ") 
   # print(block_header_root)
   # print("\n") 
-  # checkpoint_in_question = '0xe7ec5a97896da6166bb56b89f9fcb426e13b620b1587dbedda258fd4faa00ab5'
-  # checkpoint_in_question = parseHexToByte(checkpoint_in_question)
+  # checkpoint_in_question = '0x1669a323f2e9ddf8b918f959789428f1f5f588a8368b998ffc1d0d73d94d3f80'
+  # checkpoint_in_question = parseHexToByte(checkpoint_in_question)     # finalized_checkpoint_root
   # print(checkpoint_in_question)
+  # print("Tahhhh daaaahh") 
 
 
 
@@ -250,11 +255,10 @@ if __name__ == "__main__":
   # 
   #  
   # ... for each period you want:   from -> to 
-  
 
+  # What period do I sync to?
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=502&count=1" 
   committee_updates = callsAPI(committee_updates_url)
-
 
   # committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
   # next_list_of_keys = 'dummy' 
