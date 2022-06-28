@@ -4,12 +4,12 @@ from containers import BeaconBlockHeader, SyncCommittee  #  LightClientStore,
 from merkletreelogic import is_valid_merkle_branch 
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
-def callsAPI(url):
+def calls_aPI(url):
   response = requests.get(url)
   json_object = response.json() 
   return json_object
 
-def parseHexToByte(hex_string):
+def parse_hex_to_byte(hex_string):
   if hex_string[:2] == '0x':
     hex_string = hex_string[2:]
   byte_string = bytes.fromhex(hex_string)
@@ -82,7 +82,7 @@ if __name__ == "__main__":
   list_of_keys = bootstrap['data']['current_sync_committee']['pubkeys']
   hex_aggregate_pubkey = bootstrap['data']['current_sync_committee']['aggregate_pubkey']
   current_sync_committee_branch = bootstrap['data']['current_sync_committee_branch']
-
+  
   # ---------------------------------------------------------
   # PARSE JSON INFORMATION ON BLOCK_HEADER AND SYNC_COMMITTEE
   # ---------------------------------------------------------
@@ -180,11 +180,11 @@ if __name__ == "__main__":
 
   # Fill in these containers and see if the information matches up where it should 
   
-  # //////////////////////////
-  # ==========================
-  # UNDERSTANDING THE SNAPSHOT
-  # ==========================
-  # \\\\\\\\\\\\\\\\\\\\\\\\\\
+  # ////////////////////////////
+  # ===========================
+  # UNDERSTANDING THE BOOTSTRAP
+  # ===========================
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
   # Snapshot gives you... 
   # 
@@ -257,10 +257,16 @@ if __name__ == "__main__":
   # ... for each period you want:   from -> to 
 
   # What period do I sync to?
-  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=502&count=1" 
+  current_sync_period = header_slot // 8192 
+  # print(current_sync_period)                  # Sync period 504 
+  
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=503&count=1" 
   committee_updates = callsAPI(committee_updates_url)
+  print('Committee updates slot number: ')
+  # print(committee_updates)
 
-  # committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
+  committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
+  print(committee_updates_slot_number)
   # next_list_of_keys = 'dummy' 
   # next_aggregate_pubkey = 'dummy'
   # next_sync_branch = 'dummy'
