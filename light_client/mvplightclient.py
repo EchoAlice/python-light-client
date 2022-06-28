@@ -68,6 +68,7 @@ if __name__ == "__main__":
   checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"  
   checkpoint = calls_api(checkpoint_url)
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
+  # print(finalized_checkpoint_root)
 
   #  =========
   #  BOOTSTRAP
@@ -190,7 +191,7 @@ if __name__ == "__main__":
   # ===========================
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-  # Snapshot gives you... 
+  # Bootstrap gives you... 
   # 
   #     Beacon Block header():          corresponding to Checkpoint root (or any block root specified)
   #            slot:
@@ -260,16 +261,16 @@ if __name__ == "__main__":
   #  
   # ... for each period you want:   from -> to 
 
-  # What period do I sync to?
-  current_sync_period = get_sync_period(header_slot)
   
-  # print(current_sync_period)                  # Sync period 504 
+
+
   
+  current_sync_period = get_sync_period(header_slot)    # sync period 504
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=504&count=1" 
   committee_updates = calls_api(committee_updates_url)
   # print(committee_updates)
 
-
+  # Define all variables needed from updates
   #     Attested Block header():          for sync period
   #            slot:
   #            proposer_index:
@@ -282,36 +283,56 @@ if __name__ == "__main__":
   #            aggregate_pubkey:
   #  
   #     next_sync_committee_branch:
-
-
-  # Define all variables needed from updates
-  # ATTESTED BLOCK HEADER!
+  
+  # ATTESTED BLOCK HEADER VARIABLES!
   committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
   committee_updates_proposer_index = int(committee_updates['data'][0]['attested_header']['proposer_index'])
   committee_updates_parent_root =  committee_updates['data'][0]['attested_header']['parent_root']
   committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
   committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
-
-
+  # print(get_sync_period(committee_updates_slot_number))
+  
+  # UPDATES SYNC COMMITTEE VARIABLES!
+  updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
+  updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
+  next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
+  
+  # From hex to bytes
   committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
   committee_updates_state_root = parse_hex_to_byte(committee_updates_state_root)
   committee_updates_body_root = parse_hex_to_byte(committee_updates_body_root)
-
-  print(committee_updates_state_root)
-
+  
+  updates_aggregate_pubkey = parse_hex_to_byte(updates_aggregate_pubkey)
+  
+  #       List of Keys 
+  for i in range(len(list_of_keys)):
+    updates_list_of_keys[i] = parse_hex_to_byte(updates_list_of_keys[i])
+  
+  #       Sync Committee Branch 
+  for i in range(len(next_sync_committee_branch)):
+    current_sync_committee_branch[i] = parse_hex_to_byte(next_sync_committee_branch[i])
+  
+  
+  # ----------------------------------------------------------------
+  # CREATE COMMITTEE UPDATES BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
+  # ----------------------------------------------------------------
+  updates_block_header =  BeaconBlockHeader(
+    slot = committee_updates_slot_number, 
+    proposer_index = committee_updates_proposer_index, 
+    parent_root = committee_updates_parent_root,
+    state_root = committee_updates_state_root,
+    body_root = committee_updates_body_root 
+  )
+  
+  next_sync_committee = SyncCommittee(
+    pubkeys = updates_list_of_keys,
+    aggregate_pubkey = updates_aggregate_pubkey
+  )
 
   updates_sync_period = get_sync_period(committee_updates_slot_number)
   
-  next_list_of_keys = 'dummy' 
-  next_aggregate_pubkey = 'dummy'
-  next_sync_branch = 'dummy'
   # next_path = '111011'                          #<---  55 in binary, flipped around 
 
-  # next_sync_committee = 'dummy' 
-  # # next_sync_committee = SyncCommittee(
-  # #   pubkeys = next_list_of_keys,
-  # #   aggregate_pubkey = next_aggregate_pubkey
-  # # )
   
   # # next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
   # next_committee_index = 55
