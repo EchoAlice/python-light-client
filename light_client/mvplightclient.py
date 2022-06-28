@@ -292,6 +292,11 @@ if __name__ == "__main__":
   committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
   committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
 
+
+  committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
+  committee_updates_state_root = parse_hex_to_byte(committee_updates_state_root)
+  committee_updates_body_root = parse_hex_to_byte(committee_updates_body_root)
+
   print(committee_updates_state_root)
 
 
