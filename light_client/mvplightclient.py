@@ -265,16 +265,41 @@ if __name__ == "__main__":
   
   # print(current_sync_period)                  # Sync period 504 
   
-  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=503&count=1" 
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=504&count=1" 
   committee_updates = calls_api(committee_updates_url)
-  print('Committee updates slot number: ')
   # print(committee_updates)
 
+
+  #     Attested Block header():          for sync period
+  #            slot:
+  #            proposer_index:
+  #            parent_root:
+  #            state_root:                       <------------------------- The god object that every validator must agree on
+  #            body_root:
+  #
+  #     SyncCommittee():   
+  #            next_sync_committee: pubkeys[]
+  #            aggregate_pubkey:
+  #  
+  #     next_sync_committee_branch:
+
+
+  # Define all variables needed from updates
+  # ATTESTED BLOCK HEADER!
   committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
-  # print(committee_updates_slot_number)
-  # next_list_of_keys = 'dummy' 
-  # next_aggregate_pubkey = 'dummy'
-  # next_sync_branch = 'dummy'
+  committee_updates_proposer_index = int(committee_updates['data'][0]['attested_header']['proposer_index'])
+  committee_updates_parent_root =  committee_updates['data'][0]['attested_header']['parent_root']
+  committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
+  committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
+
+  print(committee_updates_state_root)
+
+
+  updates_sync_period = get_sync_period(committee_updates_slot_number)
+  
+  next_list_of_keys = 'dummy' 
+  next_aggregate_pubkey = 'dummy'
+  next_sync_branch = 'dummy'
   # next_path = '111011'                          #<---  55 in binary, flipped around 
 
   # next_sync_committee = 'dummy' 
