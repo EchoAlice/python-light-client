@@ -61,19 +61,17 @@ if __name__ == "__main__":
   #  ==========
   #  CHECKPOINT
   #  ==========
-  checkpoint_url = "https://api.allorigins.win/raw?url=https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/head/finality_checkpoints" 
+  checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"  
   checkpoint = callsAPI(checkpoint_url)
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
-  print(checkpoint)
 
   #  =========
   #  SNAPSHOT
   #  =========
-  snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/snapshot/0xe7ec5a97896da6166bb56b89f9fcb426e13b620b1587dbedda258fd4faa00ab5" 
+  snapshot_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x1669a323f2e9ddf8b918f959789428f1f5f588a8368b998ffc1d0d73d94d3f80" 
   snapshot = callsAPI(snapshot_url)
-  print(snapshot) 
+  
   #  Block Header Data
-  t_header_slot = int(snapshot['data']['header']['slot'])
   header_slot = int(snapshot['data']['header']['slot'])
   header_proposer_index = int(snapshot['data']['header']['proposer_index'])
   header_parent_root = snapshot['data']['header']['parent_root']
@@ -141,23 +139,16 @@ if __name__ == "__main__":
 
   block_header_root =  View.hash_tree_root(current_block_header)
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
+  current_committee_index = 54
 
   # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
   # -----------------------------------
 
-  # 54 in binary, flipped around 
-  index = 54
   
-  # Compare hashed answer to the BEACON BLOCK STATE ROOT that the sync committee is a part of!
-#     leaf=hash_tree_root(update.finalized_header),
-#     branch=update.finality_branch,
-#     depth=floorlog2(FINALIZED_ROOT_INDEX),
-#     index=get_subtree_index(FINALIZED_ROOT_INDEX),
-#     root=update.attested_header.state_root,
-  assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, index, header_state_root) == True 
+  assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, current_committee_index, header_state_root) 
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now 
-  # print("Tahhhh daaaahh") 
+  print("Tahhhh daaaahh") 
   
   # print("block_header_root: ") 
   # print(block_header_root)
@@ -261,14 +252,11 @@ if __name__ == "__main__":
   # ... for each period you want:   from -> to 
   
 
-  # committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/lightclient/committee_updates?from=498&to=499"  # change to 499 to 500 
-  # committee_updates = callsAPI(committee_updates_url)
-  # print("\n") 
-  # print("Committee_updates: ") 
-  # print(committee_updates)
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=502&count=1" 
+  committee_updates = callsAPI(committee_updates_url)
 
-  # # committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
 
+  # committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
   # next_list_of_keys = 'dummy' 
   # next_aggregate_pubkey = 'dummy'
   # next_sync_branch = 'dummy'
@@ -281,11 +269,11 @@ if __name__ == "__main__":
   # # )
   
   # # next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
-  
+  # next_committee_index = 55
   # # Compare the merkleized next_sync committee to the state root from the snapshot.
   # # If the two values are equivalent, we can trust that we are on the right path.
   
-  # # assert checkMerkleProof(next_sync_committee_root, next_sync_branch, next_path) == header_state_root
+  # # assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, header_state_root) 
   
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
