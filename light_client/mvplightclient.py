@@ -4,7 +4,7 @@ from containers import BeaconBlockHeader, SyncCommittee  #  LightClientStore,
 from merkletreelogic import is_valid_merkle_branch 
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
-def calls_aPI(url):
+def calls_api(url):
   response = requests.get(url)
   json_object = response.json() 
   return json_object
@@ -14,6 +14,8 @@ def parse_hex_to_byte(hex_string):
     hex_string = hex_string[2:]
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
+
+def 
 
 if __name__ == "__main__":
   #                                    
@@ -62,14 +64,14 @@ if __name__ == "__main__":
   #  CHECKPOINT
   #  ==========
   checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"  
-  checkpoint = callsAPI(checkpoint_url)
+  checkpoint = calls_api(checkpoint_url)
   finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
 
   #  =========
   #  BOOTSTRAP
   #  =========
   bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x1669a323f2e9ddf8b918f959789428f1f5f588a8368b998ffc1d0d73d94d3f80" 
-  bootstrap = callsAPI(bootstrap_url)
+  bootstrap = calls_api(bootstrap_url)
   
   #  Block Header Data
   header_slot = int(bootstrap['data']['header']['slot'])
@@ -88,18 +90,18 @@ if __name__ == "__main__":
   # ---------------------------------------------------------
 
   #       Aggregate Key and Header Roots
-  current_aggregate_pubkey = parseHexToByte(hex_aggregate_pubkey)
-  header_parent_root = parseHexToByte(header_parent_root)
-  header_state_root = parseHexToByte(header_state_root)
-  header_body_root = parseHexToByte(header_body_root)
+  current_aggregate_pubkey = parse_hex_to_byte(hex_aggregate_pubkey)
+  header_parent_root = parse_hex_to_byte(header_parent_root)
+  header_state_root = parse_hex_to_byte(header_state_root)
+  header_body_root = parse_hex_to_byte(header_body_root)
 
   #       List of Keys 
   for i in range(len(list_of_keys)):
-    list_of_keys[i] = parseHexToByte(list_of_keys[i])
+    list_of_keys[i] = parse_hex_to_byte(list_of_keys[i])
   
   #       Sync Committee Branch 
   for i in range(len(current_sync_committee_branch)):
-    current_sync_committee_branch[i] = parseHexToByte(current_sync_committee_branch[i])
+    current_sync_committee_branch[i] = parse_hex_to_byte(current_sync_committee_branch[i])
 
   # ------------------------------------------------------
   # CREATE CURRENT BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
@@ -261,7 +263,7 @@ if __name__ == "__main__":
   # print(current_sync_period)                  # Sync period 504 
   
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=503&count=1" 
-  committee_updates = callsAPI(committee_updates_url)
+  committee_updates = calls_api(committee_updates_url)
   print('Committee updates slot number: ')
   # print(committee_updates)
 
