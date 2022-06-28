@@ -15,7 +15,9 @@ def parse_hex_to_byte(hex_string):
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
 
-def 
+def get_sync_period(slot_number):
+  sync_period = slot_number // 8192
+  return sync_period
 
 if __name__ == "__main__":
   #                                    
@@ -259,7 +261,8 @@ if __name__ == "__main__":
   # ... for each period you want:   from -> to 
 
   # What period do I sync to?
-  current_sync_period = header_slot // 8192 
+  current_sync_period = get_sync_period(header_slot)
+  
   # print(current_sync_period)                  # Sync period 504 
   
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=503&count=1" 
@@ -268,7 +271,7 @@ if __name__ == "__main__":
   # print(committee_updates)
 
   committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
-  print(committee_updates_slot_number)
+  # print(committee_updates_slot_number)
   # next_list_of_keys = 'dummy' 
   # next_aggregate_pubkey = 'dummy'
   # next_sync_branch = 'dummy'
