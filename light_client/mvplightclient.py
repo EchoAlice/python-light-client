@@ -1,3 +1,4 @@
+from msilib.schema import Upgrade
 import requests
 from remerkleable.core import View
 from containers import BeaconBlockHeader, SyncCommittee  #  LightClientStore,
@@ -82,7 +83,7 @@ if __name__ == "__main__":
   header_parent_root = bootstrap['data']['header']['parent_root']
   header_state_root = bootstrap['data']['header']['state_root']
   header_body_root = bootstrap['data']['header']['body_root']
-
+  
   #  Sync Committee Data
   list_of_keys = bootstrap['data']['current_sync_committee']['pubkeys']
   hex_aggregate_pubkey = bootstrap['data']['current_sync_committee']['aggregate_pubkey']
@@ -159,8 +160,8 @@ if __name__ == "__main__":
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
   
-  # print("block_header_root: ") 
-  # print(block_header_root)
+  print("block_header_root: ") 
+  print(block_header_root)
   # print("\n") 
   # checkpoint_in_question = '0x1669a323f2e9ddf8b918f959789428f1f5f588a8368b998ffc1d0d73d94d3f80'
   # checkpoint_in_question = parseHexToByte(checkpoint_in_question)     # finalized_checkpoint_root
@@ -290,13 +291,13 @@ if __name__ == "__main__":
   committee_updates_parent_root =  committee_updates['data'][0]['attested_header']['parent_root']
   committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
   committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
-  # print(get_sync_period(committee_updates_slot_number))
-  
+  print("Updates state root: " + str(committee_updates_state_root))
+
   # UPDATES SYNC COMMITTEE VARIABLES!
   updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
   updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
   next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
-  
+
   # From hex to bytes
   committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
   committee_updates_state_root = parse_hex_to_byte(committee_updates_state_root)
@@ -304,43 +305,50 @@ if __name__ == "__main__":
   
   updates_aggregate_pubkey = parse_hex_to_byte(updates_aggregate_pubkey)
   
-  #       List of Keys 
+  #       Next List of Keys 
   for i in range(len(list_of_keys)):
     updates_list_of_keys[i] = parse_hex_to_byte(updates_list_of_keys[i])
   
-  #       Sync Committee Branch 
+  #       Next Sync Committee Branch 
   for i in range(len(next_sync_committee_branch)):
-    current_sync_committee_branch[i] = parse_hex_to_byte(next_sync_committee_branch[i])
-  
+    next_sync_committee_branch[i] = parse_hex_to_byte(next_sync_committee_branch[i])
   
   # ----------------------------------------------------------------
   # CREATE COMMITTEE UPDATES BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
   # ----------------------------------------------------------------
-  updates_block_header =  BeaconBlockHeader(
+  next_block_header =  BeaconBlockHeader(
     slot = committee_updates_slot_number, 
     proposer_index = committee_updates_proposer_index, 
     parent_root = committee_updates_parent_root,
     state_root = committee_updates_state_root,
     body_root = committee_updates_body_root 
   )
-  
+
   next_sync_committee = SyncCommittee(
     pubkeys = updates_list_of_keys,
     aggregate_pubkey = updates_aggregate_pubkey
   )
 
-  updates_sync_period = get_sync_period(committee_updates_slot_number)
-  
-  # next_path = '111011'                          #<---  55 in binary, flipped around 
+  # ------------------------------------------------------
+  #                MERKLEIZE THE OBJECTS
+  # ------------------------------------------------------
+  next_block_header_root =  View.hash_tree_root(next_block_header)
+  next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
+  # print("Next block root: " + str(next_block_header_root))
+  # print('\n') 
+  # print("Header_state root: " + str(header_state_root))
+  # print("Next committee root: " + str(next_sync_committee_root)) 
 
+  next_committee_index = 55
+  # assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, header_state_root) 
+  # print("Next committee is legit!")
   
-  # # next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
-  # next_committee_index = 55
-  # # Compare the merkleized next_sync committee to the state root from the snapshot.
-  # # If the two values are equivalent, we can trust that we are on the right path.
+  # Compare the merkleized next_sync committee to the state root from the snapshot.
+  # If the two values are equivalent, we can trust that we are on the right path.
   
-  # # assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, header_state_root) 
-  
+
+
+
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
   # # Remember to turn all values that are roots into bytes!
@@ -380,7 +388,7 @@ if __name__ == "__main__":
   #                                   \\\\\\\\\\\\\\\\\\\ || ////////////////////
   #                                    \\\\\\\\\\\\\\\\\\\  ////////////////////
   #                                    ========================================
-  #                                    SYNC TO THE LATEST FINALIZED CHECKPOINT:
+  #                                            SYNC TO THE LATEST BLOCK:
   #                                    ========================================
   #                                    ///////////////////  \\\\\\\\\\\\\\\\\\\\
   #                                   /////////////////// || \\\\\\\\\\\\\\\\\\\\

@@ -1,4 +1,3 @@
-from tabnanny import check
 from eth2spec.utils.hash_function import hash
 
 def hash_pair(left, right):
@@ -41,11 +40,11 @@ def index_to_path(index):
 #   MANUAL INDEX VALUES
 #   ===================
 
-leaf = '0'.encode('utf-8')
-leaf_pair = '1'.encode('utf-8')
-root = b'\xad\x8d\xa1\xae_\x1c:\xef\x19}\x02\x80\xfb\xbf"\xd6\xf1\x12\xf2\x80_\xd0Xe1F\xbf\xb9:\xd9\xaf|'
-branch = [leaf_pair, b'S_\xa3\r~%\xdd\x8aI\xf1SgysN\xc8(a\x08\xd1\x15\xdaPE\xd7\x7f;A\x85\xd8\xf7\x90', b'a#\x0e\x0fR\x14\xaa\x97\x87\xbfXZJ\x91\x1dQ\x93+\x15\xe8d\x85\xdb\xe7HZ\xfdt\xdf\xf5\x12\x02']  
-index = 8
+# leaf = '0'.encode('utf-8')
+# leaf_pair = '1'.encode('utf-8')
+# root = b'\xad\x8d\xa1\xae_\x1c:\xef\x19}\x02\x80\xfb\xbf"\xd6\xf1\x12\xf2\x80_\xd0Xe1F\xbf\xb9:\xd9\xaf|'
+# branch = [leaf_pair, b'S_\xa3\r~%\xdd\x8aI\xf1SgysN\xc8(a\x08\xd1\x15\xdaPE\xd7\x7f;A\x85\xd8\xf7\x90', b'a#\x0e\x0fR\x14\xaa\x97\x87\xbfXZJ\x91\x1dQ\x93+\x15\xe8d\x85\xdb\xe7HZ\xfdt\xdf\xf5\x12\x02']  
+# index = 8
 
 # Hashed manually using branch
 #    1. leaf_hash == one_a
@@ -78,6 +77,9 @@ def is_valid_merkle_branch(leaf, branch, index, root):
     if path[i] == '1':
       hashed_node = hash_pair(branch[branch_index], node_to_hash)
     if(i == 1):                                
+      # print('\n') 
+      # print("Hashed node: " + str(hashed_node))
+      # print("State root: " + str(root))
       if hashed_node == root: 
         return True
       else: 
@@ -85,5 +87,5 @@ def is_valid_merkle_branch(leaf, branch, index, root):
     node_to_hash = hashed_node
     branch_index += 1
 
-assert is_valid_merkle_branch(leaf, branch, index, root)
-print("Wahoo")
+# assert is_valid_merkle_branch(leaf, branch, index, root)
+# print("Wahoo")
