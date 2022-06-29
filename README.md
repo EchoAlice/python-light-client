@@ -1,4 +1,4 @@
-# ethereum-cosmos-bridge
-Transfers value between the Ethereum and Cosmos blockchains.
+# python-light-client
+Reads information from the ethereum blockchain in a computationally inexpensive way
 
-Work in progress! Currently developing an mvp light client
+Work in progress! MVP on the way
