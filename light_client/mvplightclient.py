@@ -200,7 +200,7 @@ if __name__ == "__main__":
 
   # "The light client stores the snapshot and fetches committee updates until it reaches the latest sync period."
 
-  # Get sycn periods from current sync period to latest sync period
+  # Get sycn period updates from current sync period to latest sync period
 
   # Fill in these containers and see if the information matches up where it should 
   
@@ -284,7 +284,8 @@ if __name__ == "__main__":
   # TURN DATA FROM UPDATE INTO VARIABLES
   # ====================================
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-  
+
+  # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
   committee_updates = calls_api(committee_updates_url)
@@ -400,9 +401,8 @@ if __name__ == "__main__":
 
 
 
-  # Why is the hashed proof not equivalent to the state?
-  assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, NEXT_SYNC_COMMITTEE_INDEX, committee_updates_state_root) 
-  
+  assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, NEXT_SYNC_COMMITTEE_INDEX, finalized_updates_state_root) 
+  print("TAHHHDAAAHHHH") 
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
 
@@ -428,9 +428,6 @@ if __name__ == "__main__":
   # # Repeat call lightclient/committee_updates until you're at the current sync period. 
 
   
-  
-
-
 
 
 
