@@ -1,7 +1,7 @@
 from msilib.schema import Upgrade
 import requests
 from remerkleable.core import View
-from containers import BeaconBlockHeader, SyncCommittee  #  LightClientStore,
+from containers import BeaconBlockHeader, SyncAggregate, SyncCommittee  #  LightClientStore,
 from merkletreelogic import is_valid_merkle_branch 
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
@@ -9,6 +9,13 @@ def calls_api(url):
   response = requests.get(url)
   json_object = response.json() 
   return json_object
+
+def parse_hex_to_bit(hex_string):
+  int_representation = int(hex_string, 16)
+  binary_vector = bin(int_representation) 
+  if binary_vector[:2] == '0b':
+    binary_vector = binary_vector[2:]
+  return binary_vector 
 
 def parse_hex_to_byte(hex_string):
   if hex_string[:2] == '0x':
@@ -271,54 +278,76 @@ if __name__ == "__main__":
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
   committee_updates = calls_api(committee_updates_url)
   # print(committee_updates)
-  
+
+  # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
+  # ================================ 
   committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
   committee_updates_proposer_index = int(committee_updates['data'][0]['attested_header']['proposer_index'])
   committee_updates_parent_root =  committee_updates['data'][0]['attested_header']['parent_root']
   committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
   committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
-
-  # UPDATES SYNC COMMITTEE VARIABLES!
-  updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
-  updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
-
-  # FINALIZED BLOCK VARIABLES!
-  finalized_updates_slot_number = int(committee_updates['data'][0]['finalized_header']['slot'])
-  finalized_updates_proposer_index = int(committee_updates['data'][0]['finalized_header']['proposer_index'])
-  finalized_updates_parent_root =  committee_updates['data'][0]['finalized_header']['parent_root']
-  finalized_updates_state_root =  committee_updates['data'][0]['finalized_header']['state_root']
-  finalized_updates_body_root =  committee_updates['data'][0]['finalized_header']['body_root']
-
-  next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
-  finalized_updates_branch = committee_updates['data'][0]['finality_branch']
   
   # From hex to bytes
   committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
   committee_updates_state_root = parse_hex_to_byte(committee_updates_state_root)
   committee_updates_body_root = parse_hex_to_byte(committee_updates_body_root)
-  finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
-  finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
-  finalized_updates_body_root = parse_hex_to_byte(finalized_updates_body_root)
-  updates_aggregate_pubkey = parse_hex_to_byte(updates_aggregate_pubkey)
+
+  # ================================= 
+  # UPDATES SYNC COMMITTEE VARIABLES!
+  # ================================= 
+  updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
+  updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
   
-  #       Next List of Keys 
+  # From hex to bytes
   for i in range(len(updates_list_of_keys)):
     updates_list_of_keys[i] = parse_hex_to_byte(updates_list_of_keys[i])
   
-  #       Next Sync Committee Branch 
+  updates_aggregate_pubkey = parse_hex_to_byte(updates_aggregate_pubkey)
+
+  # ==========================
+  # FINALIZED BLOCK VARIABLES!
+  # ========================== 
+  finalized_updates_slot_number = int(committee_updates['data'][0]['finalized_header']['slot'])
+  finalized_updates_proposer_index = int(committee_updates['data'][0]['finalized_header']['proposer_index'])
+  finalized_updates_parent_root =  committee_updates['data'][0]['finalized_header']['parent_root']
+  finalized_updates_state_root =  committee_updates['data'][0]['finalized_header']['state_root']
+  finalized_updates_body_root =  committee_updates['data'][0]['finalized_header']['body_root']
+  
+  # From hex to bytes
+  finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
+  finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
+  finalized_updates_body_root = parse_hex_to_byte(finalized_updates_body_root)
+
+  # ============================================== 
+  # Next Sync Committee Branch - from hex to bytes 
+  # ============================================== 
+  next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
   for i in range(len(next_sync_committee_branch)):
     next_sync_committee_branch[i] = parse_hex_to_byte(next_sync_committee_branch[i])
-
-  #       Finalized Sync Committee Branch 
+  
+  # =================================================== 
+  # Finalized Sync Committee Branch - from hex to bytes 
+  # =================================================== 
+  finalized_updates_branch = committee_updates['data'][0]['finality_branch']
   for i in range(len(finalized_updates_branch)):
     finalized_updates_branch[i] = parse_hex_to_byte(finalized_updates_branch[i])
+
+  # =========================                  Should I hardcode bitvector to 512 validators?
+  # SYNC AGGREGATE VARIABLES!                  I feel like I shouldn't.  
+  # ========================= 
+  sync_aggregate = committee_updates['data'][0]['sync_aggregate']
+  sync_committee_hex = committee_updates['data'][0]['sync_aggregate']['sync_committee_bits']
+  sync_committee_signature = committee_updates['data'][0]['sync_aggregate']['sync_committee_signature']
   
-  print(finalized_updates_branch)
+  # From hex to bytes (and bits)
+  sync_committee_bits = parse_hex_to_bit(sync_committee_hex) 
+  sync_committee_signature = parse_hex_to_byte(sync_committee_signature)
 
+  
+  
 
-
-
+  
 
 
   # ----------------------------------------------------------------
@@ -335,6 +364,19 @@ if __name__ == "__main__":
   next_sync_committee = SyncCommittee(
     pubkeys = updates_list_of_keys,
     aggregate_pubkey = updates_aggregate_pubkey
+  )
+
+  finalized_block_header =  BeaconBlockHeader(
+    slot = finalized_updates_slot_number, 
+    proposer_index = finalized_updates_proposer_index, 
+    parent_root = finalized_updates_parent_root,
+    state_root = finalized_updates_state_root,
+    body_root = finalized_updates_body_root 
+  )
+
+  sync_aggregate = SyncAggregate(
+    # sync_committee_bits = , 
+    sync_committee_signature = sync_committee_signature 
   )
 
   # ------------------------------------------------------
