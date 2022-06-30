@@ -86,11 +86,13 @@ if __name__ == "__main__":
   # print(bootstrap)
 
   #  Block Header Data
-  bootstrap_slot = int(bootstrap['data']['header']['slot'])
-  bootstrap_proposer_index = int(bootstrap['data']['header']['proposer_index'])
-  bootstrap_parent_root = bootstrap['data']['header']['parent_root']
-  bootstrap_state_root = bootstrap['data']['header']['state_root']
-  bootstrap_body_root = bootstrap['data']['header']['body_root']
+  bootstrap_header = bootstrap['data']['header']
+  
+  bootstrap_slot = int(bootstrap_header['slot'])
+  bootstrap_proposer_index = int(bootstrap_header['proposer_index'])
+  bootstrap_parent_root = bootstrap_header['parent_root']
+  bootstrap_state_root = bootstrap_header['state_root']
+  bootstrap_body_root = bootstrap_header['body_root']
   
   #  Sync Committee Data
   list_of_keys = bootstrap['data']['current_sync_committee']['pubkeys']
@@ -282,11 +284,13 @@ if __name__ == "__main__":
   # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
   # ================================ 
-  committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
-  committee_updates_proposer_index = int(committee_updates['data'][0]['attested_header']['proposer_index'])
-  committee_updates_parent_root =  committee_updates['data'][0]['attested_header']['parent_root']
-  committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
-  committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
+  attested_header = committee_updates['data'][0]['attested_header']
+  
+  committee_updates_slot_number = int(attested_header['slot'])
+  committee_updates_proposer_index = int(attested_header['proposer_index'])
+  committee_updates_parent_root =  attested_header['parent_root']
+  committee_updates_state_root =  attested_header['state_root']
+  committee_updates_body_root =  attested_header['body_root']
   
   # From hex to bytes
   committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
@@ -308,11 +312,13 @@ if __name__ == "__main__":
   # ==========================
   # FINALIZED BLOCK VARIABLES!
   # ========================== 
-  finalized_updates_slot_number = int(committee_updates['data'][0]['finalized_header']['slot'])
-  finalized_updates_proposer_index = int(committee_updates['data'][0]['finalized_header']['proposer_index'])
-  finalized_updates_parent_root =  committee_updates['data'][0]['finalized_header']['parent_root']
-  finalized_updates_state_root =  committee_updates['data'][0]['finalized_header']['state_root']
-  finalized_updates_body_root =  committee_updates['data'][0]['finalized_header']['body_root']
+  finalized_header =  committee_updates['data'][0]['finalized_header']
+  
+  finalized_updates_slot_number = int(finalized_header['slot'])
+  finalized_updates_proposer_index = int(finalized_header['proposer_index'])
+  finalized_updates_parent_root =  finalized_header['parent_root']
+  finalized_updates_state_root =  finalized_header['state_root']
+  finalized_updates_body_root =  finalized_header['body_root']
   
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
@@ -337,13 +343,12 @@ if __name__ == "__main__":
   # SYNC AGGREGATE VARIABLES!                  I feel like I shouldn't.  
   # ========================= 
   sync_aggregate = committee_updates['data'][0]['sync_aggregate']
-  sync_committee_hex = committee_updates['data'][0]['sync_aggregate']['sync_committee_bits']
-  sync_committee_signature = committee_updates['data'][0]['sync_aggregate']['sync_committee_signature']
+  sync_committee_hex = sync_aggregate['sync_committee_bits']
+  sync_committee_signature = sync_aggregate['sync_committee_signature']
   
   # From hex to bytes (and bits)
   sync_committee_bits = parse_hex_to_bit(sync_committee_hex) 
   sync_committee_signature = parse_hex_to_byte(sync_committee_signature)
-
   
   
 
