@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from remerkleable.basic import uint64, byte
+from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
 
 # Alliases:  (Helps readability of code)
@@ -42,6 +43,10 @@ class BeaconBlockHeader(Container):
   parent_root: Root
   state_root: Root
   body_root: Root
+
+class SyncAggregate(Container):
+    sync_committee_bits: Bitvector[SYNC_COMMITTEE_SIZE]
+    sync_committee_signature: BLSSignature
 
 class SyncCommittee(Container):
   pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
