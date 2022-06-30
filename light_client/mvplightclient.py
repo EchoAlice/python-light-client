@@ -4,6 +4,12 @@ from remerkleable.core import View
 from containers import BeaconBlockHeader, SyncAggregate, SyncCommittee  #  LightClientStore,
 from merkletreelogic import is_valid_merkle_branch 
 
+# CONSTANTS
+EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
+FINALIZED_ROOT_INDEX = 105   
+CURRENT_SYNC_COMMITTEE_INDEX = 54 
+NEXT_SYNC_COMMITTEE_INDEX = 55 
+
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def calls_api(url):
   response = requests.get(url)
@@ -157,7 +163,6 @@ if __name__ == "__main__":
   sync_committee_root = View.hash_tree_root(current_sync_committee) 
   # print("Current sync_committee_root: ")
   # print(sync_committee_root)
-  current_committee_index = 54
 
   # -----------------------------------
   # HASH NODE AGAINST THE MERKLE BRANCH
@@ -168,7 +173,7 @@ if __name__ == "__main__":
   #  (each attribute in BeaconBlockHeader(Container)) against the trusted, finalized checkpoint root to make sure
   #  server serving the bootstrap information for a specified checkpoint root wasn't lying.
   
-  assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, current_committee_index, bootstrap_state_root) 
+  assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, CURRENT_SYNC_COMMITTEE_INDEX, bootstrap_state_root) 
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
 
@@ -274,12 +279,16 @@ if __name__ == "__main__":
   # ... for each period you want:   from -> to 
 
   
-
+  # ////////////////////////////////////
+  # ====================================
+  # TURN DATA FROM UPDATE INTO VARIABLES
+  # ====================================
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
   committee_updates = calls_api(committee_updates_url)
-  # print(committee_updates)
+  print(committee_updates)
 
   # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
@@ -350,14 +359,13 @@ if __name__ == "__main__":
   sync_committee_bits = parse_hex_to_bit(sync_committee_hex) 
   sync_committee_signature = parse_hex_to_byte(sync_committee_signature)
   
-  
 
-  
+  # ///////////////////////////////////////////////
+  # ----------------------------------------------
+  # CREATE COMMITTEE UPDATES OBJECTS AND MERKLEIZE
+  # ----------------------------------------------
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-
-  # --------------------------------
-  # CREATE COMMITTEE UPDATES OBJECTS
-  # --------------------------------
   next_block_header =  BeaconBlockHeader(
     slot = committee_updates_slot_number, 
     proposer_index = committee_updates_proposer_index, 
@@ -384,9 +392,6 @@ if __name__ == "__main__":
     sync_committee_signature = sync_committee_signature 
   )
 
-  # ------------------------------------------------------
-  #                MERKLEIZE THE OBJECTS
-  # ------------------------------------------------------
   next_block_header_root =  View.hash_tree_root(next_block_header)
   next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
   finalized_block_header =  View.hash_tree_root(finalized_block_header)
@@ -395,13 +400,9 @@ if __name__ == "__main__":
 
 
 
-  next_committee_index = 55
-  assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, committee_updates_state_root) 
+  # Why is the hashed proof not equivalent to the state?
+  assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, NEXT_SYNC_COMMITTEE_INDEX, committee_updates_state_root) 
   
-  
-
-
-
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
 
