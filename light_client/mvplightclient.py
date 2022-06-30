@@ -339,8 +339,8 @@ if __name__ == "__main__":
   for i in range(len(finalized_updates_branch)):
     finalized_updates_branch[i] = parse_hex_to_byte(finalized_updates_branch[i])
 
-  # =========================                  Should I hardcode bitvector to 512 validators?
-  # SYNC AGGREGATE VARIABLES!                  I feel like I shouldn't.  
+  # =========================                  
+  # SYNC AGGREGATE VARIABLES!                    
   # ========================= 
   sync_aggregate = committee_updates['data'][0]['sync_aggregate']
   sync_committee_hex = sync_aggregate['sync_committee_bits']
@@ -355,9 +355,9 @@ if __name__ == "__main__":
   
 
 
-  # ----------------------------------------------------------------
-  # CREATE COMMITTEE UPDATES BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
-  # ----------------------------------------------------------------
+  # --------------------------------
+  # CREATE COMMITTEE UPDATES OBJECTS
+  # --------------------------------
   next_block_header =  BeaconBlockHeader(
     slot = committee_updates_slot_number, 
     proposer_index = committee_updates_proposer_index, 
@@ -380,7 +380,7 @@ if __name__ == "__main__":
   )
 
   sync_aggregate = SyncAggregate(
-    # sync_committee_bits = , 
+    sync_committee_bits = sync_committee_bits, 
     sync_committee_signature = sync_committee_signature 
   )
 
@@ -389,15 +389,12 @@ if __name__ == "__main__":
   # ------------------------------------------------------
   next_block_header_root =  View.hash_tree_root(next_block_header)
   next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
+  finalized_block_header =  View.hash_tree_root(finalized_block_header)
+  sync_aggregate =  View.hash_tree_root(sync_aggregate)
   
-  # print("Next block root: " + str(next_block_header_root))
-  # print('\n') 
-  # print("Header_state root: " + str(header_state_root))
-  # print("Next committee root: " + str(next_sync_committee_root)) 
 
 
 
-  # assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, current_committee_index, bootstrap_state_root) 
   next_committee_index = 55
   assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, committee_updates_state_root) 
   
