@@ -76,7 +76,7 @@ if __name__ == "__main__":
   #  =========
   bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x229f88ef9dad77baa53dc507ae23a60261968b54aebbe7875144cdf2e7c548d8" 
   bootstrap = calls_api(bootstrap_url)
-  print(bootstrap)
+  # print(bootstrap)
 
   #  Block Header Data
   bootstrap_slot = int(bootstrap['data']['header']['slot'])
@@ -111,7 +111,6 @@ if __name__ == "__main__":
   # ------------------------------------------------------
   # CREATE CURRENT BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
   # ------------------------------------------------------
-  print(bootstrap_slot)
   current_block_header =  BeaconBlockHeader(
     slot = bootstrap_slot, 
     proposer_index = bootstrap_proposer_index, 
@@ -245,10 +244,8 @@ if __name__ == "__main__":
   #     next_sync_committee_branch:
   #
   #
-  #     ** FIND OUT WHERE THIS DATA STRUCTURE LIES **
   #
-  #
-  #     Finalized Block header():                    <---- This might not be the correct label.  Figure out what I'm looking at!
+  #     Finalized Block header():                    
   #            slot:
   #            proposer_index:
   #            parent_root:
@@ -269,26 +266,11 @@ if __name__ == "__main__":
 
   
 
-
   
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
   committee_updates = calls_api(committee_updates_url)
   # print(committee_updates)
-
-  # Define all variables needed from updates
-  #     Attested Block header():          for sync period
-  #            slot:
-  #            proposer_index:
-  #            parent_root:
-  #            state_root:                       <------------------------- The god object that every validator must agree on
-  #            body_root:
-  #
-  #     SyncCommittee():   
-  #            next_sync_committee: pubkeys[]
-  #            aggregate_pubkey:
-  #  
-  #     next_sync_committee_branch:
   
   # ATTESTED BLOCK HEADER VARIABLES!
   committee_updates_slot_number = int(committee_updates['data'][0]['attested_header']['slot'])
@@ -296,33 +278,28 @@ if __name__ == "__main__":
   committee_updates_parent_root =  committee_updates['data'][0]['attested_header']['parent_root']
   committee_updates_state_root =  committee_updates['data'][0]['attested_header']['state_root']
   committee_updates_body_root =  committee_updates['data'][0]['attested_header']['body_root']
-  committee_updates_sync_period = get_sync_period(committee_updates_slot_number)
-
-  print("com") 
-  print(committee_updates_slot_number)
-
-# IMPORTANT QUESTION I NEED TO UNDERSTAND
-
-# Should header state root of period 505 == update_state_root of 504?
-  # print("Header state root: ") 
-  # print(header_state_root) 
-
-  # print("committee_updates_state_root: ") 
-  # print(committee_updates_state_root)
-
-
 
   # UPDATES SYNC COMMITTEE VARIABLES!
   updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
   updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
-  
-  next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
 
+  # FINALIZED BLOCK VARIABLES!
+  finalized_updates_slot_number = int(committee_updates['data'][0]['finalized_header']['slot'])
+  finalized_updates_proposer_index = int(committee_updates['data'][0]['finalized_header']['proposer_index'])
+  finalized_updates_parent_root =  committee_updates['data'][0]['finalized_header']['parent_root']
+  finalized_updates_state_root =  committee_updates['data'][0]['finalized_header']['state_root']
+  finalized_updates_body_root =  committee_updates['data'][0]['finalized_header']['body_root']
+
+  next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
+  finalized_updates_branch = committee_updates['data'][0]['finality_branch']
+  
   # From hex to bytes
   committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
   committee_updates_state_root = parse_hex_to_byte(committee_updates_state_root)
   committee_updates_body_root = parse_hex_to_byte(committee_updates_body_root)
-  
+  finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
+  finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
+  finalized_updates_body_root = parse_hex_to_byte(finalized_updates_body_root)
   updates_aggregate_pubkey = parse_hex_to_byte(updates_aggregate_pubkey)
   
   #       Next List of Keys 
@@ -332,14 +309,12 @@ if __name__ == "__main__":
   #       Next Sync Committee Branch 
   for i in range(len(next_sync_committee_branch)):
     next_sync_committee_branch[i] = parse_hex_to_byte(next_sync_committee_branch[i])
+
+  #       Finalized Sync Committee Branch 
+  for i in range(len(finalized_updates_branch)):
+    finalized_updates_branch[i] = parse_hex_to_byte(finalized_updates_branch[i])
   
-  print(len(next_sync_committee_branch))
-
-
-
-  committee_updates_finalized_root =  committee_updates['data'][0]['finalized_header']['state_root']
-  committee_updates_finalized_root = parse_hex_to_byte(committee_updates_finalized_root)
-  # print(committee_updates_finalized_root)
+  print(finalized_updates_branch)
 
 
 
@@ -373,19 +348,25 @@ if __name__ == "__main__":
   # print("Header_state root: " + str(header_state_root))
   # print("Next committee root: " + str(next_sync_committee_root)) 
 
+
+
+  # assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, current_committee_index, bootstrap_state_root) 
   next_committee_index = 55
-  # OG 
-  # assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, committee_updates_state_root) 
+  assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, next_committee_index, committee_updates_state_root) 
   
-  # Compare the merkleized next_sync committee to the state root from the snapshot.
-  # If the two values are equivalent, we can trust that we are on the right path.
   
 
 
 
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
-  # # Remember to turn all values that are roots into bytes!
+
+
+  # ====================
+  #  LIGHT CLIENT STORE
+  # ====================
+
+  # Remember to turn all values that are roots into bytes!
   # current_light_client_store =  LightClientStore(
   #   finalized_header = finalized_checkpoint_root, 
   #   current_sync_committee = current_sync_committee, 
