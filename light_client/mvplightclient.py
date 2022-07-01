@@ -311,8 +311,9 @@ if __name__ == "__main__":
   # =================================
 
   # Use naming convention here*******
-  updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
-  updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
+  next_sync_committee = committee_updates['data'][0]['next_sync_committee']
+  updates_list_of_keys = next_sync_committee['pubkeys']
+  updates_aggregate_pubkey = next_sync_committee['aggregate_pubkey']
   
   # From hex to bytes
   for i in range(len(updates_list_of_keys)):
@@ -332,9 +333,9 @@ if __name__ == "__main__":
   finalized_updates_body_root =  finalized_header['body_root']
   
   # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
-  # print("attested header slot: " + str(committee_updates_slot_number) + " and period: " + str(get_sync_period(committee_updates_slot_number))) 
-  # print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
-  # print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
+  print("attested header slot: " + str(committee_updates_slot_number) + " and period: " + str(get_sync_period(committee_updates_slot_number))) 
+  print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
+  print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
  
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
@@ -459,7 +460,7 @@ if __name__ == "__main__":
     finalized_header = finalized_block_header,
     finality_branch = finalized_updates_branch,
     sync_aggregate = sync_aggregate,
-    fork_version = fork_version  
+    signature_slot =   
   )
 
   print(light_client_store) 
