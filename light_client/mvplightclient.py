@@ -1,8 +1,8 @@
 from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
 from containers import BeaconBlockHeader, LightClientStore, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
-import requests
 from remerkleable.core import View
+import requests
 
 # SYNC_COMMITTEE_SIZE = 512
 # EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
@@ -407,17 +407,14 @@ if __name__ == "__main__":
   
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
-  print(current_committee_root)
-  print(next_sync_committee_root)
    
   # ====================
   #  LIGHT CLIENT STORE
   # ====================
 
-  # Remember to turn all values that are roots into bytes!
   current_light_client_store =  LightClientStore(
-    finalized_header = current_header_root, 
-    current_sync_committee = current_committee_root, 
+    finalized_header = current_block_header, 
+    current_sync_committee = current_sync_committee, 
     next_sync_committee = next_sync_committee,
 
     #                              Figure out what these values are 
