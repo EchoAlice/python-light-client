@@ -1,14 +1,14 @@
-from msilib.schema import Upgrade
+from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
+from containers import BeaconBlockHeader, LightClientStore, SyncAggregate, SyncCommittee
+from merkletreelogic import is_valid_merkle_branch 
 import requests
 from remerkleable.core import View
-from containers import BeaconBlockHeader, SyncAggregate, SyncCommittee  #  LightClientStore,
-from merkletreelogic import is_valid_merkle_branch 
 
-# CONSTANTS
-EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
-FINALIZED_ROOT_INDEX = 105   
-CURRENT_SYNC_COMMITTEE_INDEX = 54 
-NEXT_SYNC_COMMITTEE_INDEX = 55 
+# SYNC_COMMITTEE_SIZE = 512
+# EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
+# FINALIZED_ROOT_INDEX = 105   
+# CURRENT_SYNC_COMMITTEE_INDEX = 54 
+# NEXT_SYNC_COMMITTEE_INDEX
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def calls_api(url):
@@ -79,9 +79,9 @@ if __name__ == "__main__":
   #  ==========
   #  CHECKPOINT
   #  ==========
-  checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"  
-  checkpoint = calls_api(checkpoint_url)
-  finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
+  # checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"  
+  # checkpoint = calls_api(checkpoint_url)
+  # finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
   # print(finalized_checkpoint_root)
 
   #  =========
@@ -159,8 +159,8 @@ if __name__ == "__main__":
   #  following the right sync committee.
   # ------------------------------------------------------
 
-  block_header_root =  View.hash_tree_root(current_block_header)
-  sync_committee_root = View.hash_tree_root(current_sync_committee) 
+  current_header_root =  View.hash_tree_root(current_block_header)
+  current_committee_root = View.hash_tree_root(current_sync_committee) 
   # print("Current sync_committee_root: ")
   # print(sync_committee_root)
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
   #  (each attribute in BeaconBlockHeader(Container)) against the trusted, finalized checkpoint root to make sure
   #  server serving the bootstrap information for a specified checkpoint root wasn't lying.
   
-  assert is_valid_merkle_branch(sync_committee_root, current_sync_committee_branch, CURRENT_SYNC_COMMITTEE_INDEX, bootstrap_state_root) 
+  assert is_valid_merkle_branch(current_committee_root, current_sync_committee_branch, CURRENT_SYNC_COMMITTEE_INDEX, bootstrap_state_root) 
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
 
@@ -289,7 +289,7 @@ if __name__ == "__main__":
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
   committee_updates = calls_api(committee_updates_url)
-  print(committee_updates)
+  # print(committee_updates)
 
   # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
@@ -329,7 +329,11 @@ if __name__ == "__main__":
   finalized_updates_parent_root =  finalized_header['parent_root']
   finalized_updates_state_root =  finalized_header['state_root']
   finalized_updates_body_root =  finalized_header['body_root']
-  
+  # !!!!!!!!BLOCK VALUES!!!!!!! 
+  print("attested header slot: " + str(committee_updates_slot_number) + " and period: " + str(get_sync_period(committee_updates_slot_number))) 
+  print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
+  print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
+ 
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
   finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
@@ -398,31 +402,45 @@ if __name__ == "__main__":
   finalized_block_header =  View.hash_tree_root(finalized_block_header)
   sync_aggregate =  View.hash_tree_root(sync_aggregate)
   
-
-
-
+  # Next sync committee hashed against proof and compared to finalized state root
   assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, NEXT_SYNC_COMMITTEE_INDEX, finalized_updates_state_root) 
-  print("TAHHHDAAAHHHH") 
+  
   # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
-
-
+  print(current_committee_root)
+  print(next_sync_committee_root)
+   
   # ====================
   #  LIGHT CLIENT STORE
   # ====================
 
   # Remember to turn all values that are roots into bytes!
-  # current_light_client_store =  LightClientStore(
-  #   finalized_header = finalized_checkpoint_root, 
-  #   current_sync_committee = current_sync_committee, 
-  #   next_sync_committee = next_sync_committee,
+  current_light_client_store =  LightClientStore(
+    finalized_header = current_header_root, 
+    current_sync_committee = current_committee_root, 
+    next_sync_committee = next_sync_committee,
 
-  #   #                              Figure out what these values are 
-  #   # best_valid_update = ,
-  #   # optimistic_header = ,
-  #   # previous_max_active_participants = ,
-  #   # current_max_active_participants = 
-  # )
+    #                              Figure out what these values are 
+    # best_valid_update = ,
+    # optimistic_header = ,
+    # previous_max_active_participants = ,
+    # current_max_active_participants = 
+  )
+
+
+  # ====================
+  #  LIGHT CLIENT UPDATE 
+  # ====================
+
+
+
+
+
+  # ///////////////////////////////////////////////
+  # ----------------------------------------------
+  #            BRING IN THE MVP SPEC!! 
+  # ----------------------------------------------
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
   # # Repeat call lightclient/committee_updates until you're at the current sync period. 
