@@ -26,8 +26,9 @@ Version	= Bytes4
 BLSPubkey =	Bytes48
 BLSSignature = Bytes96
 
+# should this be an int? or a uint__
 def floorlog2(x) -> int:
-  print(floor(log2(x)))
+  return floor(log2(x))
 
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
 # A Generalized index is a way of referring to a poisition of an object in a merkle tree,
