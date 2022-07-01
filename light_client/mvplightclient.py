@@ -1,5 +1,5 @@
 from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
-from containers import BeaconBlockHeader, LightClientStore, SyncAggregate, SyncCommittee
+from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
 import requests
@@ -278,6 +278,7 @@ if __name__ == "__main__":
   #  
   # ... for each period you want:   from -> to 
 
+
   
   # ////////////////////////////////////
   # ====================================
@@ -309,7 +310,9 @@ if __name__ == "__main__":
 
   # ================================= 
   # UPDATES SYNC COMMITTEE VARIABLES!
-  # ================================= 
+  # =================================
+
+  # Use naming convention here*******
   updates_list_of_keys = committee_updates['data'][0]['next_sync_committee']['pubkeys']
   updates_aggregate_pubkey = committee_updates['data'][0]['next_sync_committee']['aggregate_pubkey']
   
@@ -329,10 +332,11 @@ if __name__ == "__main__":
   finalized_updates_parent_root =  finalized_header['parent_root']
   finalized_updates_state_root =  finalized_header['state_root']
   finalized_updates_body_root =  finalized_header['body_root']
-  # !!!!!!!!BLOCK VALUES!!!!!!! 
-  print("attested header slot: " + str(committee_updates_slot_number) + " and period: " + str(get_sync_period(committee_updates_slot_number))) 
-  print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
-  print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
+  
+  # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
+  # print("attested header slot: " + str(committee_updates_slot_number) + " and period: " + str(get_sync_period(committee_updates_slot_number))) 
+  # print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
+  # print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
  
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
@@ -352,7 +356,7 @@ if __name__ == "__main__":
   finalized_updates_branch = committee_updates['data'][0]['finality_branch']
   for i in range(len(finalized_updates_branch)):
     finalized_updates_branch[i] = parse_hex_to_byte(finalized_updates_branch[i])
-
+  
   # =========================                  
   # SYNC AGGREGATE VARIABLES!                    
   # ========================= 
@@ -363,7 +367,15 @@ if __name__ == "__main__":
   # From hex to bytes (and bits)
   sync_committee_bits = parse_hex_to_bit(sync_committee_hex) 
   sync_committee_signature = parse_hex_to_byte(sync_committee_signature)
-  
+
+  # ============                  
+  # FORK_VERSION                    
+  # ============ 
+  fork_version =  committee_updates['data'][0]['fork_version']
+  # From hex to bytes
+  fork_version = parse_hex_to_byte(fork_version)
+
+
 
   # ///////////////////////////////////////////////
   # ----------------------------------------------
@@ -371,7 +383,7 @@ if __name__ == "__main__":
   # ----------------------------------------------
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-  next_block_header =  BeaconBlockHeader(
+  attested_block_header =  BeaconBlockHeader(
     slot = committee_updates_slot_number, 
     proposer_index = committee_updates_proposer_index, 
     parent_root = committee_updates_parent_root,
@@ -397,23 +409,34 @@ if __name__ == "__main__":
     sync_committee_signature = sync_committee_signature 
   )
 
-  next_block_header_root =  View.hash_tree_root(next_block_header)
+  attested_block_header_root =  View.hash_tree_root(attested_block_header)
   next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
-  finalized_block_header =  View.hash_tree_root(finalized_block_header)
-  sync_aggregate =  View.hash_tree_root(sync_aggregate)
+  finalized_block_header_root =  View.hash_tree_root(finalized_block_header)
+  sync_aggregate_root =  View.hash_tree_root(sync_aggregate)
   
   # Next sync committee hashed against proof and compared to finalized state root
   assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, NEXT_SYNC_COMMITTEE_INDEX, finalized_updates_state_root) 
-  
-  # finalized_checkpoint_root = parseHexToByte(finalized_checkpoint_root)
 
+
+
+  # //////////////////////////////////////////////////////////////
+  # -------------------------------------------------------------
+  # PLACE OBJECTS INTO LIGHT CLIENT STORE AND LIGHT CLIENT UPDATE 
+  # -------------------------------------------------------------
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/\\\\\\\\\\\
    
-  # ====================
-  #  LIGHT CLIENT STORE
-  # ====================
+  # ===================                                   IMPORTANT QUESTION:
+  #  LIGHT CLIENT STORE        How do I tie the finalized block header back to the bootstrap checkpoint root?
+  # ===================        Because right now there's a gap in the logic:  
+  #                                 Yes the next sync committee hashes against merkle proof to equal the finalized state,
+  #                                 but the finalized state isn't connected back to the checkpoint root.
+  #                                               print(finalized_block_header_root)
+  # 
+  # 
+  #                            For now, press on and execute spec functions properly
 
-  current_light_client_store =  LightClientStore(
-    finalized_header = current_block_header, 
+  light_client_store =  LightClientStore(
+    finalized_header = finalized_block_header, 
     current_sync_committee = current_sync_committee, 
     next_sync_committee = next_sync_committee,
 
@@ -424,12 +447,22 @@ if __name__ == "__main__":
     # current_max_active_participants = 
   )
 
-
   # ====================
   #  LIGHT CLIENT UPDATE 
   # ====================
 
+  light_client_update = LightClientUpdate(
+    attested_header = attested_block_header,
+    next_sync_committee = next_sync_committee,
+    next_sync_committee_branch = next_sync_committee_branch,
+    finalized_header = finalized_block_header,
+    finality_branch = finalized_updates_branch,
+    sync_aggregate = sync_aggregate,
+    fork_version = fork_version  
+  )
 
+  print(light_client_store) 
+  print(light_client_update)
 
 
 
@@ -440,7 +473,7 @@ if __name__ == "__main__":
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
-  # # Repeat call lightclient/committee_updates until you're at the current sync period. 
+
 
   
 
