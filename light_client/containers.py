@@ -1,7 +1,6 @@
 from constants import SYNC_COMMITTEE_SIZE, NEXT_SYNC_COMMITTEE_INDEX, FINALIZED_ROOT_INDEX
 from dataclasses import dataclass
-from math import floor, log2
-# from mvplightclient import FINALIZED_ROOT_INDEX ,NEXT_SYNC_COMMITTEE_INDEX
+from merkletreelogic import floorlog2
 from remerkleable.basic import uint64, byte
 from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
@@ -25,10 +24,6 @@ Hash32	= Bytes32
 Version	= Bytes4
 BLSPubkey =	Bytes48
 BLSSignature = Bytes96
-
-# should this be an int? or a uint__
-def floorlog2(x) -> int:
-  return floor(log2(x))
 
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
 # A Generalized index is a way of referring to a poisition of an object in a merkle tree,
@@ -80,7 +75,6 @@ class LightClientStore(object):
   # Sync committees corresponding to the header
   current_sync_committee: SyncCommittee
   next_sync_committee: SyncCommittee
-  
   
   # # Best available header to switch finalized head to if we see nothing else
   # best_valid_update: Optional[LightClientUpdate]

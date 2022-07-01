@@ -1,10 +1,6 @@
 from constants import FINALIZED_ROOT_INDEX
-from containers import Bytes32, Root, Slot, BeaconBlockHeader, LightClientStore, LightClientUpdate
-from math import floor, log2
-
-# should this be an int? or a uint__
-def floorlog2(x) -> int:
-  return floor(log2(x))
+from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate
+from merkletreelogic import floorlog2
 
 def is_finality_update(update: LightClientUpdate) -> bool:
     return update.finality_branch != [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
@@ -17,6 +13,12 @@ def get_active_header(update: LightClientUpdate) -> BeaconBlockHeader:
         return update.finalized_header
     else:
         return update.attested_header
+
+
+
+#                               ==============
+#                                THE BIG BOYS
+#                               ==============
 
 def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,

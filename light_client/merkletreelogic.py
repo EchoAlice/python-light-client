@@ -1,4 +1,8 @@
 from eth2spec.utils.hash_function import hash
+from math import floor, log2
+
+def floorlog2(x) -> int:
+  return floor(log2(x))
 
 def hash_pair(left, right):
   parent_node = hash(left + right)
