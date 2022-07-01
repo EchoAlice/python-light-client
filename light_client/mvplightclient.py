@@ -4,12 +4,6 @@ from merkletreelogic import is_valid_merkle_branch
 from remerkleable.core import View
 import requests
 
-# SYNC_COMMITTEE_SIZE = 512
-# EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
-# FINALIZED_ROOT_INDEX = 105   
-# CURRENT_SYNC_COMMITTEE_INDEX = 54 
-# NEXT_SYNC_COMMITTEE_INDEX
-
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def calls_api(url):
   response = requests.get(url)
@@ -173,7 +167,11 @@ if __name__ == "__main__":
   #  (each attribute in BeaconBlockHeader(Container)) against the trusted, finalized checkpoint root to make sure
   #  server serving the bootstrap information for a specified checkpoint root wasn't lying.
   
-  assert is_valid_merkle_branch(current_committee_root, current_sync_committee_branch, CURRENT_SYNC_COMMITTEE_INDEX, bootstrap_state_root) 
+  assert is_valid_merkle_branch(current_committee_root, 
+                                current_sync_committee_branch, 
+                                CURRENT_SYNC_COMMITTEE_INDEX, 
+                                bootstrap_state_root) 
+  
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
 
@@ -415,7 +413,10 @@ if __name__ == "__main__":
   sync_aggregate_root =  View.hash_tree_root(sync_aggregate)
   
   # Next sync committee hashed against proof and compared to finalized state root
-  assert is_valid_merkle_branch(next_sync_committee_root, next_sync_committee_branch, NEXT_SYNC_COMMITTEE_INDEX, finalized_updates_state_root) 
+  assert is_valid_merkle_branch(next_sync_committee_root, 
+                                next_sync_committee_branch, 
+                                NEXT_SYNC_COMMITTEE_INDEX, 
+                                finalized_updates_state_root) 
 
 
 
@@ -463,7 +464,6 @@ if __name__ == "__main__":
 
   print(light_client_store) 
   print(light_client_update)
-
 
 
   # ///////////////////////////////////////////////
