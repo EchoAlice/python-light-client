@@ -11,7 +11,6 @@ Bytes32 = Vector[byte, 32]
 Bytes48 = Vector[byte, 48]
 Bytes96 = Vector[byte, 96]
 
-
 # Data type.      Maybe this should be a Vector? idk
 # Define custom types (aka alliases):
 Slot = uint64
@@ -65,8 +64,8 @@ class LightClientUpdate(Container):
   finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
   # Sync committee aggregate signature
   sync_aggregate: SyncAggregate
-  # Fork version for the aggregate signature.  This lets us make sure the votes are for the fork we think we're on
-  fork_version: Version
+  # Slot at which the aggregate signature was created (untrusted)
+  signature_slot: Slot
 
 @dataclass
 class LightClientStore(object):
