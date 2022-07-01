@@ -2,6 +2,7 @@ from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
 from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
+from specfunctions import validate_light_client_update
 import requests
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
@@ -288,29 +289,26 @@ if __name__ == "__main__":
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
   committee_updates = calls_api(committee_updates_url)
-  # print(committee_updates)
 
   # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
   # ================================ 
   attested_header = committee_updates['data'][0]['attested_header']
   
-  committee_updates_slot_number = int(attested_header['slot'])
-  committee_updates_proposer_index = int(attested_header['proposer_index'])
-  committee_updates_parent_root =  attested_header['parent_root']
-  committee_updates_state_root =  attested_header['state_root']
-  committee_updates_body_root =  attested_header['body_root']
+  attested_header_slot_number = int(attested_header['slot'])
+  attested_header_proposer_index = int(attested_header['proposer_index'])
+  attested_header_parent_root =  attested_header['parent_root']
+  attested_header_state_root =  attested_header['state_root']
+  attested_header_body_root =  attested_header['body_root']
   
   # From hex to bytes
-  committee_updates_parent_root = parse_hex_to_byte(committee_updates_parent_root)
-  committee_updates_state_root = parse_hex_to_byte(committee_updates_state_root)
-  committee_updates_body_root = parse_hex_to_byte(committee_updates_body_root)
+  attested_header_parent_root = parse_hex_to_byte(attested_header_parent_root)
+  attested_header_state_root = parse_hex_to_byte(attested_header_state_root)
+  attested_header_body_root = parse_hex_to_byte(attested_header_body_root)
 
   # ================================= 
   # UPDATES SYNC COMMITTEE VARIABLES!
   # =================================
-
-  # Use naming convention here*******
   next_sync_committee = committee_updates['data'][0]['next_sync_committee']
   updates_list_of_keys = next_sync_committee['pubkeys']
   updates_aggregate_pubkey = next_sync_committee['aggregate_pubkey']
@@ -333,7 +331,7 @@ if __name__ == "__main__":
   finalized_updates_body_root =  finalized_header['body_root']
   
   # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
-  print("attested header slot: " + str(committee_updates_slot_number) + " and period: " + str(get_sync_period(committee_updates_slot_number))) 
+  print("attested header slot: " + str(attested_header_slot_number) + " and period: " + str(get_sync_period(attested_header_slot_number))) 
   print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
   print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
  
@@ -383,11 +381,11 @@ if __name__ == "__main__":
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
   attested_block_header =  BeaconBlockHeader(
-    slot = committee_updates_slot_number, 
-    proposer_index = committee_updates_proposer_index, 
-    parent_root = committee_updates_parent_root,
-    state_root = committee_updates_state_root,
-    body_root = committee_updates_body_root 
+    slot = attested_header_slot_number, 
+    proposer_index = attested_header_proposer_index, 
+    parent_root = attested_header_parent_root,
+    state_root = attested_header_state_root,
+    body_root = attested_header_body_root 
   )
   
   next_sync_committee = SyncCommittee(
@@ -459,12 +457,16 @@ if __name__ == "__main__":
     next_sync_committee_branch = next_sync_committee_branch,
     finalized_header = finalized_block_header,
     finality_branch = finalized_updates_branch,
+    # A record of which validators in the current sync committee voted for the chain head in the previous slot
     sync_aggregate = sync_aggregate,
-    signature_slot =   
+    # Slot at which the aggregate signature was created (untrusted)
+    # signature_slot =  4137440 
   )
 
-  print(light_client_store) 
-  print(light_client_update)
+   
+  # print(committee_updates)
+  # print(light_client_store) 
+  # print(light_client_update)
 
 
   # ///////////////////////////////////////////////
@@ -475,7 +477,7 @@ if __name__ == "__main__":
 
 
 
-
+  # attested_header_slot_number - finalized_updates_slot_number
   
 
 
