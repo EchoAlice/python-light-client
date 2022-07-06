@@ -1,9 +1,12 @@
+# from time import ctime
 from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
 from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
 from specfunctions import validate_light_client_update
 import requests
+
+# ctime()
 
 # A first milestone for a light client implementation is to HAVE A LIGHT CLIENT THAT SIMPLY TRACKS THE LATEST STATE/BLOCK ROOT.
 def calls_api(url):
@@ -74,18 +77,16 @@ if __name__ == "__main__":
   #  ==========
   #  CHECKPOINT
   #  ==========
-  # checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"  
-  # checkpoint = calls_api(checkpoint_url)
-  # finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
-  # print(finalized_checkpoint_root)
-
+  checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
+  checkpoint = calls_api(checkpoint_url)
+  finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
+  
   #  =========
   #  BOOTSTRAP
   #  =========
-  bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x229f88ef9dad77baa53dc507ae23a60261968b54aebbe7875144cdf2e7c548d8" 
+  bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038" 
   bootstrap = calls_api(bootstrap_url)
-  # print(bootstrap)
-
+  print(bootstrap) 
   #  Block Header Data
   bootstrap_header = bootstrap['data']['header']
   
@@ -94,7 +95,7 @@ if __name__ == "__main__":
   bootstrap_parent_root = bootstrap_header['parent_root']
   bootstrap_state_root = bootstrap_header['state_root']
   bootstrap_body_root = bootstrap_header['body_root']
-  
+
   #  Sync Committee Data
   list_of_keys = bootstrap['data']['current_sync_committee']['pubkeys']
   current_aggregate_pubkey = bootstrap['data']['current_sync_committee']['aggregate_pubkey']
@@ -287,7 +288,7 @@ if __name__ == "__main__":
 
   # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
-  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=505&count=1" 
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
   committee_updates = calls_api(committee_updates_url)
 
   # ================================ 
@@ -334,7 +335,8 @@ if __name__ == "__main__":
   print("attested header slot: " + str(attested_header_slot_number) + " and period: " + str(get_sync_period(attested_header_slot_number))) 
   print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
   print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
- 
+  # print('att - fin: ' + str(attested_header_slot_number - finalized_updates_slot_number))  
+
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
   finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
@@ -460,11 +462,16 @@ if __name__ == "__main__":
     # A record of which validators in the current sync committee voted for the chain head in the previous slot
     sync_aggregate = sync_aggregate,
     # Slot at which the aggregate signature was created (untrusted)
-    # signature_slot =  4137440 
+    signature_slot =  4137440 
   )
 
-   
-  # print(committee_updates)
+  # validate_light_client_update(light_client_store,
+  #                             light_client_update,
+  #                             ) 
+  # print(committee_updates) 
+
+# update.signature_slot > active_header.slot
+
   # print(light_client_store) 
   # print(light_client_update)
 
@@ -477,8 +484,8 @@ if __name__ == "__main__":
 
 
 
-  # attested_header_slot_number - finalized_updates_slot_number
-  
+  # print(attested_header_slot_number - finalized_updates_slot_number)
+  # print((bootstrap_slot - finalized_updates_slot_number)/32)  
 
 
 
