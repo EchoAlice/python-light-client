@@ -1,5 +1,5 @@
 # from time import ctime
-from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
+from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
 from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
@@ -30,6 +30,10 @@ def parse_hex_to_byte(hex_string):
 def get_sync_period(slot_number):
   sync_period = slot_number // 8192
   return sync_period
+
+def get_epoch(slot_number):
+  epoch = slot_number // SLOTS_PER_EPOCH 
+  return epoch
 
 if __name__ == "__main__":
   #                                    
