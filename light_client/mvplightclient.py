@@ -27,6 +27,10 @@ def parse_hex_to_byte(hex_string):
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
 
+def parse_list(list):
+  for i in range(len(list)):
+    list[i] = parse_hex_to_byte(list[i])
+
 def get_sync_period(slot_number):
   sync_period = slot_number // 8192
   return sync_period
@@ -115,13 +119,11 @@ if __name__ == "__main__":
   bootstrap_state_root = parse_hex_to_byte(bootstrap_state_root)
   bootstrap_body_root = parse_hex_to_byte(bootstrap_body_root)
 
-  #       List of Keys 
-  for i in range(len(list_of_keys)):
-    list_of_keys[i] = parse_hex_to_byte(list_of_keys[i])
+  #       List of Keys
+  parse_list(list_of_keys) 
   
   #       Sync Committee Branch 
-  for i in range(len(current_sync_committee_branch)):
-    current_sync_committee_branch[i] = parse_hex_to_byte(current_sync_committee_branch[i])
+  parse_list(current_sync_committee_branch) 
 
   # ------------------------------------------------------
   # CREATE CURRENT BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
@@ -317,11 +319,9 @@ if __name__ == "__main__":
   next_sync_committee = committee_updates['data'][0]['next_sync_committee']
   updates_list_of_keys = next_sync_committee['pubkeys']
   updates_aggregate_pubkey = next_sync_committee['aggregate_pubkey']
-  
+
   # From hex to bytes
-  for i in range(len(updates_list_of_keys)):
-    updates_list_of_keys[i] = parse_hex_to_byte(updates_list_of_keys[i])
-  
+  parse_list(updates_list_of_keys)
   updates_aggregate_pubkey = parse_hex_to_byte(updates_aggregate_pubkey)
 
   # ==========================
@@ -335,16 +335,16 @@ if __name__ == "__main__":
   finalized_updates_state_root =  finalized_header['state_root']
   finalized_updates_body_root =  finalized_header['body_root']
   
-  # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
-  print("attested header slot: " + str(attested_header_slot_number)) 
-  print("finalized header slot: " + str(finalized_updates_slot_number)) 
-  print("bootstrap header slot: " + str(bootstrap_slot)) 
-  print('\n') 
-  # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
-  print("Final header 512 - 511: " + str(4198752 - 4189312)) 
-  print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
-  print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
-  
+  # # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
+  # print("attested header slot: " + str(attested_header_slot_number)) 
+  # print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  # print("bootstrap header slot: " + str(bootstrap_slot)) 
+  # print('\n') 
+  # # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
+  # print("Final header 512 - 511: " + str(4198752 - 4189312)) 
+  # print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
+  # print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
+
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
   finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
@@ -354,15 +354,14 @@ if __name__ == "__main__":
   # Next Sync Committee Branch - from hex to bytes 
   # ============================================== 
   next_sync_committee_branch = committee_updates['data'][0]['next_sync_committee_branch']
-  for i in range(len(next_sync_committee_branch)):
-    next_sync_committee_branch[i] = parse_hex_to_byte(next_sync_committee_branch[i])
-  
+  parse_list(next_sync_committee_branch)
+
+
   # =================================================== 
   # Finalized Sync Committee Branch - from hex to bytes 
   # =================================================== 
   finalized_updates_branch = committee_updates['data'][0]['finality_branch']
-  for i in range(len(finalized_updates_branch)):
-    finalized_updates_branch[i] = parse_hex_to_byte(finalized_updates_branch[i])
+  parse_list(finalized_updates_branch) 
   
   # =========================                  
   # SYNC AGGREGATE VARIABLES!                    
