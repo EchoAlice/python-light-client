@@ -81,16 +81,16 @@ if __name__ == "__main__":
   #  ==========
   #  CHECKPOINT
   #  ==========
-  checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
-  checkpoint = calls_api(checkpoint_url)
-  finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
+  # checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
+  # checkpoint = calls_api(checkpoint_url)
+  # finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
   
   #  =========
   #  BOOTSTRAP
   #  =========
   bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038" 
   bootstrap = calls_api(bootstrap_url)
-  print(bootstrap) 
+  
   #  Block Header Data
   bootstrap_header = bootstrap['data']['header']
   
@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
   # Committee update gives you...
   # 
-  #     Attested Block header():          for sync period
+  #     Attested Block header():         
   #            slot:
   #            proposer_index:
   #            parent_root:
@@ -292,9 +292,9 @@ if __name__ == "__main__":
 
   # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
-  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=512&count=1" 
   committee_updates = calls_api(committee_updates_url)
-
+  
   # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
   # ================================ 
@@ -336,11 +336,15 @@ if __name__ == "__main__":
   finalized_updates_body_root =  finalized_header['body_root']
   
   # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
-  print("attested header slot: " + str(attested_header_slot_number) + " and period: " + str(get_sync_period(attested_header_slot_number))) 
-  print("finalized header slot: " + str(finalized_updates_slot_number) + " and period: " + str(get_sync_period(finalized_updates_slot_number))) 
-  print("bootstrap header slot: " + str(bootstrap_slot) + " and period: " + str(get_sync_period(bootstrap_slot))) 
-  # print('att - fin: ' + str(attested_header_slot_number - finalized_updates_slot_number))  
-
+  print("attested header slot: " + str(attested_header_slot_number)) 
+  print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  print("bootstrap header slot: " + str(bootstrap_slot)) 
+  print('\n') 
+  # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
+  print("Final header 512 - 511: " + str(4198752 - 4189312)) 
+  print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
+  print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
+  
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
   finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
@@ -441,6 +445,7 @@ if __name__ == "__main__":
   # 
   #                            For now, press on and execute spec functions properly
 
+  #  I think I need to store the information from the bootstrap call into here.  not update stuff...
   light_client_store =  LightClientStore(
     finalized_header = finalized_block_header, 
     current_sync_committee = current_sync_committee, 
@@ -464,15 +469,19 @@ if __name__ == "__main__":
     finalized_header = finalized_block_header,
     finality_branch = finalized_updates_branch,
     # A record of which validators in the current sync committee voted for the chain head in the previous slot
+    #
+    # Contains the sync committee's bitfield and signature required for verifying the attested header
     sync_aggregate = sync_aggregate,
-    # Slot at which the aggregate signature was created (untrusted)
-    signature_slot =  4137440 
+    # Slot at which the aggregate signature was created (untrusted)    I don't know this value
+    signature_slot =  attested_header_slot_number - 1 
   )
 
   # validate_light_client_update(light_client_store,
   #                             light_client_update,
   #                             ) 
   # print(committee_updates) 
+
+
 
 # update.signature_slot > active_header.slot
 
