@@ -43,15 +43,11 @@ def validate_light_client_update(store: LightClientStore,
     # TEST ZONE!
     assert  update.signature_slot > active_header.slot > store.finalized_header.slot
 
-
-
-
     # Verify update does not skip a sync committee period
     finalized_period = compute_sync_committee_period(compute_epoch_at_slot(store.finalized_header.slot))
-    print(finalized_period)
-    # update_period = compute_sync_committee_period(compute_epoch_at_slot(active_header.slot))
-    # signature_period = compute_sync_committee_period(compute_epoch_at_slot(update.signature_slot))
-    # assert signature_period in (finalized_period, finalized_period + 1)
+    update_period = compute_sync_committee_period(compute_epoch_at_slot(active_header.slot))
+    signature_period = compute_sync_committee_period(compute_epoch_at_slot(update.signature_slot))
+    assert signature_period in (finalized_period, finalized_period + 1)
 
     # # Verify that the `finality_branch`, if present, confirms `finalized_header`
     # # to match the finalized checkpoint root saved in the state of `attested_header`.
