@@ -149,17 +149,17 @@ if __name__ == "__main__":
   # =================================================
   # /////////////////////////////////////////////////
 
-  # ------------------------------------------------------
+  # ---------------------------------------------------------
   #                MERKLEIZE THE OBJECTS
   #
-  # Converts the sync committee object into a merkle root.
+  #   Converts the sync committee object into a merkle root.
   # 
-  # If the state root derived from the sync_committee_root 
-  # combined with its proof branch matches the 
-  # header_state_root AND the block header root with this
-  # state root matches the checkpoint root, you know you're
-  #  following the right sync committee.
-  # ------------------------------------------------------
+  #   If the state root derived from the sync_committee_root 
+  #   combined with its proof branch matches the 
+  #   header_state_root AND the block header root with this
+  #   state root matches the checkpoint root, you know you're
+  #   following the right sync committee.
+  # ----------------------------------------------------------
 
   current_header_root =  View.hash_tree_root(current_block_header)
   current_committee_root = View.hash_tree_root(current_sync_committee) 
@@ -205,86 +205,9 @@ if __name__ == "__main__":
 
 
   # "The light client stores the snapshot and fetches committee updates until it reaches the latest sync period."
-
+  # 
   # Get sycn period updates from current sync period to latest sync period
-
-  # Fill in these containers and see if the information matches up where it should 
   
-  # ////////////////////////////
-  # ===========================
-  # UNDERSTANDING THE BOOTSTRAP
-  # ===========================
-  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-  # Bootstrap gives you... 
-  # 
-  #     Beacon Block header():          corresponding to Checkpoint root (or any block root specified)
-  #            slot:
-  #            proposer_index:
-  #            parent_root:
-  #            state_root:                       <------------------------- The god object that every validator must agree on
-  #            body_root:
-  #         
-  #     SyncCommittee():   
-  #            current_sync_committee:  pubkeys[]
-  #            aggregate_pubkey:
-  
-  #     *Additional information given*           <---------- Allows you to verify that the sync committee given is legitimate 
-  #            current_sync_committee_branch:
-  #
-  #  Hashing the merkleized current_sync_committee root against the current_sync_committee_branch and
-  #  comparing this to the given state root verifies that the current sync committee is legitamite.  
-  # 
-  
-  #           The sync committee is so important because it allows the light client to keep up with the head of the blockchain
-  #           efficiently and in real time by only having to check the signature that goes with the head block.  If majority of 
-  #           committee signed the block, then you know that is the head of the chain.  Compare all information you want to check
-  #           against the beacon state for validity. 
-   
-  
-  # //////////////////////////////////
-  # ==================================
-  # UNDERSTANDING THE COMMITTEE_UPDATE
-  # ==================================
-  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-  # Committee update gives you...
-  # 
-  #     Attested Block header():         
-  #            slot:
-  #            proposer_index:
-  #            parent_root:
-  #            state_root:                       <------------------------- The god object that every validator must agree on
-  #            body_root:
-  #
-  #     SyncCommittee():   
-  #            next_sync_committee: pubkeys[]
-  #            aggregate_pubkey:
-  #  
-  #     next_sync_committee_branch:
-  #
-  #
-  #
-  #     Finalized Block header():                    
-  #            slot:
-  #            proposer_index:
-  #            parent_root:
-  #            state_root:
-  #            body_root:
-  # 
-  #     finality_branch:
-  #
-  #     sync_aggregate:
-  #            sync_committee_bits:
-  #            sync_committee_signature:
-  #     fork_version:          
-  #
-  #
-  # 
-  #  
-  # ... for each period you want:   from -> to 
-
-
   
   # ////////////////////////////////////
   # ====================================
@@ -335,15 +258,15 @@ if __name__ == "__main__":
   finalized_updates_state_root =  finalized_header['state_root']
   finalized_updates_body_root =  finalized_header['body_root']
   
-  # # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
-  # print("attested header slot: " + str(attested_header_slot_number)) 
-  # print("finalized header slot: " + str(finalized_updates_slot_number)) 
-  # print("bootstrap header slot: " + str(bootstrap_slot)) 
-  # print('\n') 
-  # # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
-  # print("Final header 512 - 511: " + str(4198752 - 4189312)) 
-  # print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
-  # print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
+  # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
+  print("attested header slot: " + str(attested_header_slot_number)) 
+  print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  print("bootstrap header slot: " + str(bootstrap_slot)) 
+  print('\n') 
+  # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
+  print("Final header 512 - 511: " + str(4198752 - 4189312)) 
+  print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
+  print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
 
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
