@@ -1,6 +1,11 @@
+from remerkleable.basic import uint64
+
+Slot = uint64
+
 CURRENT_SYNC_COMMITTEE_INDEX = 54 
 EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
 FINALIZED_ROOT_INDEX = 105   
+GENESIS_SLOT = Slot(0)
 NEXT_SYNC_COMMITTEE_INDEX = 55
-SLOTS_PER_EPOCH = 32                        #  2**5 
+SLOTS_PER_EPOCH = 32                        #   2**5 
 SYNC_COMMITTEE_SIZE = 512
