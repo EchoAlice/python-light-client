@@ -1,4 +1,5 @@
 # from time import ctime
+from re import I
 from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
 from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
@@ -216,14 +217,15 @@ if __name__ == "__main__":
   #                                    ====================================
   #                                    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-  # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
-  bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  511
-  bootstrap_committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
-  bootstrap_committee_updates = calls_api(bootstrap_committee_updates_url)
   
   # ==========================================
   # BOOTSTRAP'S NEXT SYNC COMMITTEE VARIABLES!
   # ==========================================
+  
+  bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  511
+  bootstrap_committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
+  bootstrap_committee_updates = calls_api(bootstrap_committee_updates_url)
+  
   bootstrap_next_sync_committee = bootstrap_committee_updates['data'][0]['next_sync_committee']
   bootstrap_next_list_of_keys = bootstrap_next_sync_committee['pubkeys']
   bootstrap_next_aggregate_pubkey = bootstrap_next_sync_committee['aggregate_pubkey']
@@ -237,7 +239,14 @@ if __name__ == "__main__":
     pubkeys = bootstrap_next_list_of_keys,
     aggregate_pubkey = bootstrap_next_aggregate_pubkey
   )
-
+  
+  
+  
+  #                           ============================
+  #                           COMMITTEE UPDATE'S VARIABLES 
+  #                           ============================
+  
+  # This api call needs to be updated every time the sync period changes!  Bootstrap's api call remains the same (Only used initially).
   # update_sync_period = get_sync_period()   
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=512&count=1" 
   committee_updates = calls_api(committee_updates_url)
@@ -280,16 +289,6 @@ if __name__ == "__main__":
   finalized_updates_state_root =  finalized_header['state_root']
   finalized_updates_body_root =  finalized_header['body_root']
   
-  # !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!! 
-  print("attested header slot: " + str(attested_header_slot_number)) 
-  print("finalized header slot: " + str(finalized_updates_slot_number)) 
-  print("bootstrap header slot: " + str(bootstrap_slot)) 
-  print('\n') 
-  # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
-  
-  print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
-  print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
-
   # From hex to bytes
   finalized_updates_parent_root = parse_hex_to_byte(finalized_updates_parent_root)
   finalized_updates_state_root = parse_hex_to_byte(finalized_updates_state_root)
@@ -325,6 +324,28 @@ if __name__ == "__main__":
   fork_version =  committee_updates['data'][0]['fork_version']
   # From hex to bytes
   fork_version = parse_hex_to_byte(fork_version)
+
+
+
+
+  #                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+  #                         !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!!!
+  #                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+  print("attested header slot: " + str(attested_header_slot_number)) 
+  print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  print("bootstrap header slot: " + str(bootstrap_slot)) 
+  print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
+  print('\n') 
+   
+  print("Bootstrap block's epoch: " + str(get_epoch(bootstrap_slot)))
+  print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
+  print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
+
+
+  print("Bootstrap block's sync period: " + str(get_sync_period(bootstrap_slot)))
+  print("Finalized block's sync period: " + str(get_sync_period(finalized_updates_slot_number)))
+  print("Attested block's sync period: " + str(get_sync_period(attested_header_slot_number)))
 
 
 
@@ -364,12 +385,6 @@ if __name__ == "__main__":
   next_sync_committee_root = View.hash_tree_root(next_sync_committee) 
   finalized_block_header_root =  View.hash_tree_root(finalized_block_header)
   sync_aggregate_root =  View.hash_tree_root(sync_aggregate)
-  
-  # Next sync committee hashed against proof and compared to finalized state root
-  assert is_valid_merkle_branch(next_sync_committee_root, 
-                                next_sync_committee_branch, 
-                                NEXT_SYNC_COMMITTEE_INDEX, 
-                                finalized_updates_state_root) 
 
 
 
