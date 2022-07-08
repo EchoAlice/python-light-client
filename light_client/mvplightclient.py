@@ -126,9 +126,9 @@ if __name__ == "__main__":
   parse_list(current_sync_committee_branch) 
 
   # ------------------------------------------------------
-  # CREATE CURRENT BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
+  # CREATE BOOTSTRAP BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
   # ------------------------------------------------------
-  current_block_header =  BeaconBlockHeader(
+  bootstrap_block_header =  BeaconBlockHeader(
     slot = bootstrap_slot, 
     proposer_index = bootstrap_proposer_index, 
     parent_root = bootstrap_parent_root,
@@ -161,7 +161,7 @@ if __name__ == "__main__":
   #   following the right sync committee.
   # ----------------------------------------------------------
 
-  current_header_root =  View.hash_tree_root(current_block_header)
+  bootstrap_header_root =  View.hash_tree_root(bootstrap_block_header)
   current_committee_root = View.hash_tree_root(current_sync_committee) 
   # print("Current sync_committee_root: ")
   # print(sync_committee_root)
@@ -183,14 +183,16 @@ if __name__ == "__main__":
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
 
-  # print("Header state root: " + str(header_state_root)) 
-  # checkpoint_in_question = '0x229f88ef9dad77baa53dc507ae23a60261968b54aebbe7875144cdf2e7c548d8'
-  # checkpoint_in_question = parse_hex_to_byte(checkpoint_in_question)     # finalized_checkpoint_root
+  # print("Bootstrap state root: " + str(bootstrap_state_root)) 
+  checkpoint_in_question = '0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038'
+  checkpoint_root = parse_hex_to_byte(checkpoint_in_question)     # finalized_checkpoint_root
   
-  # print("block_header_root: ") 
-  # print(block_header_root)
-  # print(checkpoint_in_question)
-  # print("Tahhhh daaaahh") 
+  print("block_header_root: ") 
+  print(bootstrap_header_root)
+  print("checkpoint_root: ")
+  print(checkpoint_root)
+  assert bootstrap_header_root == checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
+  print("Tahhhh daaaahh") 
 
 
 
@@ -209,14 +211,14 @@ if __name__ == "__main__":
   # Get sycn period updates from current sync period to latest sync period
   
   
-  # ////////////////////////////////////
-  # ====================================
-  # TURN DATA FROM UPDATE INTO VARIABLES
-  # ====================================
-  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  #                                    ////////////////////////////////////
+  #                                    ====================================
+  #                                    TURN DATA FROM UPDATE INTO VARIABLES
+  #                                    ====================================
+  #                                    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
   # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
-  bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  505
+  bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  511
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=512&count=1" 
   committee_updates = calls_api(committee_updates_url)
   
@@ -264,7 +266,7 @@ if __name__ == "__main__":
   print("bootstrap header slot: " + str(bootstrap_slot)) 
   print('\n') 
   # 511  finalized header slot =  4189312          512 finalized header slot = 4198752 
-  print("Final header 512 - 511: " + str(4198752 - 4189312)) 
+  
   print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
   print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
 
