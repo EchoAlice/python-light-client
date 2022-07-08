@@ -183,16 +183,15 @@ if __name__ == "__main__":
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
 
-  # print("Bootstrap state root: " + str(bootstrap_state_root)) 
-  checkpoint_in_question = '0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038'
-  checkpoint_root = parse_hex_to_byte(checkpoint_in_question)     # finalized_checkpoint_root
+  # checkpoint_in_question = '0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038'
+  # checkpoint_root = parse_hex_to_byte(checkpoint_in_question)     # finalized_checkpoint_root
   
-  print("block_header_root: ") 
-  print(bootstrap_header_root)
-  print("checkpoint_root: ")
-  print(checkpoint_root)
-  assert bootstrap_header_root == checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
-  print("Tahhhh daaaahh") 
+  # print("block_header_root: ") 
+  # print(bootstrap_header_root)
+  # print("checkpoint_root: ")
+  # print(checkpoint_root)
+  # assert bootstrap_header_root == checkpoint_root     
+  # print("Proof that the bootstrap sync committee is verified from the checkpoint root") 
 
 
 
@@ -219,9 +218,31 @@ if __name__ == "__main__":
 
   # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  511
-  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=512&count=1" 
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
   committee_updates = calls_api(committee_updates_url)
   
+  # ==========================================
+  # BOOTSTRAP'S NEXT SYNC COMMITTEE VARIABLES!
+  # ==========================================
+  bootstrap_next_sync_committee = committee_updates['data'][0]['next_sync_committee']
+  bootstrap_next_list_of_keys = bootstrap_next_sync_committee['pubkeys']
+  bootstrap_next_aggregate_pubkey = bootstrap_next_sync_committee['aggregate_pubkey']
+
+  # From hex to bytes
+  parse_list(bootstrap_next_list_of_keys)
+  bootstrap_next_aggregate_pubkey = parse_hex_to_byte(bootstrap_next_aggregate_pubkey)
+
+  # Create bootstrap's next sync committee 
+  bootstrap_next_sync_committee = SyncCommittee(
+    pubkeys = bootstrap_next_list_of_keys,
+    aggregate_pubkey = bootstrap_next_aggregate_pubkey
+  )
+
+
+  # update_sync_period = get_sync_period()   
+  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=512&count=1" 
+  committee_updates = calls_api(committee_updates_url)
+
   # ================================ 
   # ATTESTED BLOCK HEADER VARIABLES!
   # ================================ 
@@ -366,10 +387,8 @@ if __name__ == "__main__":
   #                                 but the finalized state isn't connected back to the checkpoint root.
   #                                               print(finalized_block_header_root)
   # 
-  # 
   #                            For now, press on and execute spec functions properly
 
-  #  I think I need to store the information from the bootstrap call into here.  not update stuff...
   light_client_store =  LightClientStore(
     finalized_header = bootstrap_block_header, 
     current_sync_committee = bootstrap_sync_committee, 
@@ -400,17 +419,9 @@ if __name__ == "__main__":
     signature_slot =  attested_header_slot_number - 1 
   )
 
-  # validate_light_client_update(light_client_store,
-  #                             light_client_update,
-  #                             ) 
   # print(committee_updates) 
 
 
-
-# update.signature_slot > active_header.slot
-
-  # print(light_client_store) 
-  # print(light_client_update)
 
 
   # ///////////////////////////////////////////////
@@ -419,10 +430,11 @@ if __name__ == "__main__":
   # ----------------------------------------------
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
+  # validate_light_client_update(light_client_store,
+  #                             light_client_update,
+  #                             ) 
 
 
-  # print(attested_header_slot_number - finalized_updates_slot_number)
-  # print((bootstrap_slot - finalized_updates_slot_number)/32)  
 
 
 
