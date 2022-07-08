@@ -136,7 +136,7 @@ if __name__ == "__main__":
     body_root = bootstrap_body_root
   )
 
-  current_sync_committee = SyncCommittee(
+  bootstrap_sync_committee = SyncCommittee(
     pubkeys = list_of_keys,
     aggregate_pubkey = current_aggregate_pubkey
   )
@@ -162,7 +162,7 @@ if __name__ == "__main__":
   # ----------------------------------------------------------
 
   bootstrap_header_root =  View.hash_tree_root(bootstrap_block_header)
-  current_committee_root = View.hash_tree_root(current_sync_committee) 
+  bootstrap_committee_root = View.hash_tree_root(bootstrap_sync_committee) 
   # print("Current sync_committee_root: ")
   # print(sync_committee_root)
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
   #  (each attribute in BeaconBlockHeader(Container)) against the trusted, finalized checkpoint root to make sure
   #  server serving the bootstrap information for a specified checkpoint root wasn't lying.
   
-  assert is_valid_merkle_branch(current_committee_root, 
+  assert is_valid_merkle_branch(bootstrap_committee_root, 
                                 current_sync_committee_branch, 
                                 CURRENT_SYNC_COMMITTEE_INDEX, 
                                 bootstrap_state_root) 
@@ -371,8 +371,8 @@ if __name__ == "__main__":
 
   #  I think I need to store the information from the bootstrap call into here.  not update stuff...
   light_client_store =  LightClientStore(
-    finalized_header = finalized_block_header, 
-    current_sync_committee = current_sync_committee, 
+    finalized_header = bootstrap_block_header, 
+    current_sync_committee = bootstrap_sync_committee, 
     next_sync_committee = next_sync_committee,
 
     #                              Figure out what these values are 
