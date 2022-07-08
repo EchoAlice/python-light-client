@@ -1,10 +1,9 @@
 # from time import ctime
-from re import I
-from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
+from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
 from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
-from specfunctions import validate_light_client_update
+from specfunctions import compute_epoch_at_slot, validate_light_client_update
 import requests
 
 # ctime()
@@ -36,9 +35,6 @@ def get_sync_period(slot_number):
   sync_period = slot_number // 8192
   return sync_period
 
-def compute_epoch_at_slot(slot_number):
-  epoch = slot_number // SLOTS_PER_EPOCH 
-  return epoch
 
 if __name__ == "__main__":
   #                                    
