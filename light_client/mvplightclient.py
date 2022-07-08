@@ -36,7 +36,7 @@ def get_sync_period(slot_number):
   sync_period = slot_number // 8192
   return sync_period
 
-def get_epoch(slot_number):
+def compute_epoch_at_slot(slot_number):
   epoch = slot_number // SLOTS_PER_EPOCH 
   return epoch
 
@@ -338,9 +338,9 @@ if __name__ == "__main__":
   print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
   print('\n') 
    
-  print("Bootstrap block's epoch: " + str(get_epoch(bootstrap_slot)))
-  print("Finalized block's epoch: " + str(get_epoch(finalized_updates_slot_number)))
-  print("Attested block's epoch: " + str(get_epoch(attested_header_slot_number)))
+  print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
+  print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
+  print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
 
 
   print("Bootstrap block's sync period: " + str(get_sync_period(bootstrap_slot)))
@@ -444,9 +444,9 @@ if __name__ == "__main__":
   # ----------------------------------------------
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-  # validate_light_client_update(light_client_store,
-  #                             light_client_update,
-  #                             ) 
+  validate_light_client_update(light_client_store,
+                              light_client_update,
+                              ) 
 
 
 
