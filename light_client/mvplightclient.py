@@ -218,13 +218,13 @@ if __name__ == "__main__":
 
   # Should I be getting the update for the period AFTER the bootstrap period or for the CURRENT period? 
   bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  511
-  committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
-  committee_updates = calls_api(committee_updates_url)
+  bootstrap_committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
+  bootstrap_committee_updates = calls_api(bootstrap_committee_updates_url)
   
   # ==========================================
   # BOOTSTRAP'S NEXT SYNC COMMITTEE VARIABLES!
   # ==========================================
-  bootstrap_next_sync_committee = committee_updates['data'][0]['next_sync_committee']
+  bootstrap_next_sync_committee = bootstrap_committee_updates['data'][0]['next_sync_committee']
   bootstrap_next_list_of_keys = bootstrap_next_sync_committee['pubkeys']
   bootstrap_next_aggregate_pubkey = bootstrap_next_sync_committee['aggregate_pubkey']
 
@@ -237,7 +237,6 @@ if __name__ == "__main__":
     pubkeys = bootstrap_next_list_of_keys,
     aggregate_pubkey = bootstrap_next_aggregate_pubkey
   )
-
 
   # update_sync_period = get_sync_period()   
   committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=512&count=1" 
@@ -392,7 +391,7 @@ if __name__ == "__main__":
   light_client_store =  LightClientStore(
     finalized_header = bootstrap_block_header, 
     current_sync_committee = bootstrap_sync_committee, 
-    next_sync_committee = next_sync_committee,
+    next_sync_committee = bootstrap_next_sync_committee,
 
     #                              Figure out what these values are 
     # best_valid_update = ,
