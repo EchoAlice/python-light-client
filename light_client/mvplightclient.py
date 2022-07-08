@@ -3,7 +3,7 @@ from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
 from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
-from specfunctions import compute_epoch_at_slot, validate_light_client_update
+from specfunctions import compute_epoch_at_slot, compute_sync_committee_period ,validate_light_client_update
 import requests
 
 # ctime()
@@ -30,10 +30,6 @@ def parse_hex_to_byte(hex_string):
 def parse_list(list):
   for i in range(len(list)):
     list[i] = parse_hex_to_byte(list[i])
-
-def get_sync_period(slot_number):
-  sync_period = slot_number // 8192
-  return sync_period
 
 
 if __name__ == "__main__":
@@ -218,7 +214,7 @@ if __name__ == "__main__":
   # BOOTSTRAP'S NEXT SYNC COMMITTEE VARIABLES!
   # ==========================================
   
-  bootstrap_sync_period = get_sync_period(bootstrap_slot)   #  511
+  bootstrap_sync_period = compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))   #  511
   bootstrap_committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
   bootstrap_committee_updates = calls_api(bootstrap_committee_updates_url)
   
@@ -338,10 +334,9 @@ if __name__ == "__main__":
   print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
   print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
 
-
-  print("Bootstrap block's sync period: " + str(get_sync_period(bootstrap_slot)))
-  print("Finalized block's sync period: " + str(get_sync_period(finalized_updates_slot_number)))
-  print("Attested block's sync period: " + str(get_sync_period(attested_header_slot_number)))
+  print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
+  print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
+  print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
 
 
 

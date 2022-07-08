@@ -1,6 +1,14 @@
-from constants import FINALIZED_ROOT_INDEX
+from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, SLOTS_PER_EPOCH
 from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate
 from merkletreelogic import floorlog2
+
+def compute_epoch_at_slot(slot_number):
+  epoch = slot_number // SLOTS_PER_EPOCH 
+  return epoch
+
+def compute_sync_committee_period(epoch_number):
+  sync_period = epoch_number // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+  return sync_period
 
 def is_finality_update(update: LightClientUpdate) -> bool:
     return update.finality_branch != [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
@@ -22,17 +30,25 @@ def get_active_header(update: LightClientUpdate) -> BeaconBlockHeader:
 
 def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,
-                                 current_slot: Slot,
-                                 genesis_validators_root: Root) -> None:
+                                #  current_slot: Slot,
+                                #  genesis_validators_root: Root
+                                 ) -> None:
     # Verify update slot is larger than slot of current best finalized header
     active_header = get_active_header(update)
-    assert current_slot >= update.signature_slot > active_header.slot > store.finalized_header.slot
+    
+    # This is the real one 
+    # assert current_slot >= update.signature_slot > active_header.slot > store.finalized_header.slot
+    
+    
+    # TEST ZONE!
+    assert  update.signature_slot > active_header.slot > store.finalized_header.slot
 
 
 
 
-    # # Verify update does not skip a sync committee period
-    # finalized_period = compute_sync_committee_period(compute_epoch_at_slot(store.finalized_header.slot))
+    # Verify update does not skip a sync committee period
+    finalized_period = compute_sync_committee_period(compute_epoch_at_slot(store.finalized_header.slot))
+    print(finalized_period)
     # update_period = compute_sync_committee_period(compute_epoch_at_slot(active_header.slot))
     # signature_period = compute_sync_committee_period(compute_epoch_at_slot(update.signature_slot))
     # assert signature_period in (finalized_period, finalized_period + 1)
