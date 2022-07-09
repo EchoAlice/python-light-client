@@ -1,6 +1,6 @@
 from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, SLOTS_PER_EPOCH
 from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate
-from merkletreelogic import floorlog2
+from merkletreelogic import floorlog2, is_valid_merkle_branch
 from remerkleable.core import View
 
 def compute_epoch_at_slot(slot_number):
@@ -37,12 +37,12 @@ def validate_light_client_update(store: LightClientStore,
     # Verify update slot is larger than slot of current best finalized header
     active_header = get_active_header(update)
     
-    # This is the real one 
+    # THIS IS THE REAL ONE 
     # assert current_slot >= update.signature_slot > active_header.slot > store.finalized_header.slot
-    
     
     # TEST ZONE!
     assert  update.signature_slot > active_header.slot > store.finalized_header.slot
+
 
     # Verify update does not skip a sync committee period
     finalized_period = compute_sync_committee_period(compute_epoch_at_slot(store.finalized_header.slot))
@@ -61,14 +61,15 @@ def validate_light_client_update(store: LightClientStore,
             assert update.finalized_header == BeaconBlockHeader()
         else:
             finalized_root = View.hash_tree_root(update.finalized_header)
-        # assert is_valid_merkle_branch(
-        #     leaf=finalized_root,
-        #     branch=update.finality_branch,
-        #     depth=floorlog2(FINALIZED_ROOT_INDEX),
-        #     index=get_subtree_index(FINALIZED_ROOT_INDEX),
-        #     root=update.attested_header.state_root,
-        # )
-    
+        assert is_valid_merkle_branch(
+            leaf=finalized_root,
+            branch=update.finality_branch,
+            # depth=floorlog2(FINALIZED_ROOT_INDEX),
+            index=FINALIZED_ROOT_INDEX,                       # index=get_subtree_index(FINALIZED_ROOT_INDEX),        <--- Ethereum's version of this parameter         
+            root=update.attested_header.state_root,
+        )
+
+    print("After I get this part of the function working, commit this as 'Verifies finality branch confirms....' ") 
 
     # # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
     # # state of the `active_header`
