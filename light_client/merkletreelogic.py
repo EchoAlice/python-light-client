@@ -57,7 +57,22 @@ def index_to_path(index):
 # third_hash = hash_pair(second_hash, branch[2])
 # print("Final Value: " + str(third_hash))
 
-
+# ETHEREUM'S PROOF FUNCTION
+#
+# Try to make my own work for the spec.  If I can't make it happen, then use Ethereum's
+# 
+#
+# def is_valid_merkle_branch(leaf: Bytes32, branch: Sequence[Bytes32], depth: uint64, index: uint64, root: Root) -> bool:
+#     """
+#     Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
+#     """
+#     value = leaf
+#     for i in range(depth):
+#         if index // (2**i) % 2:
+#             value = hash(branch[i] + value)
+#         else:
+#             value = hash(value + branch[i])
+#     return value == root
 
 
 # assert is_valid_merkle_branch(
@@ -68,22 +83,21 @@ def index_to_path(index):
 #     root=update.attested_header.state_root,
 # )
 
-# The function I've created doesn't take in the depth of the tree.  Is this a problem? 
+
 def is_valid_merkle_branch(leaf, branch, index, root):
   node_to_hash = leaf
   hashed_node = 0
   path = index_to_path(index)
   branch_index = 0 
   # TRAVERSE THE PATH BACKWARDS!
-  for i in range(len(branch), 0, -1):                      
+  for i in range(len(branch), 0, -1):                     
+  # Converts vector[Bytes32] (form of branch in container) to a string of bytes (form my function can manipulate)
+    branch_value = bytes(branch[branch_index])                         
     if path[i] == '0':
-      hashed_node = hash_pair(node_to_hash, branch[branch_index])
+      hashed_node = hash_pair(node_to_hash, branch_value)
     if path[i] == '1':
-      hashed_node = hash_pair(branch[branch_index], node_to_hash)
+      hashed_node = hash_pair(branch_value, node_to_hash)
     if(i == 1):                                
-      # print('\n') 
-      # print("Hashed node: " + str(hashed_node))
-      # print("State root: " + str(root))
       if hashed_node == root: 
         return True
       else: 
