@@ -1,5 +1,5 @@
-from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, SLOTS_PER_EPOCH
-from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate
+from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
+from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncCommittee
 from merkletreelogic import floorlog2, is_valid_merkle_branch
 from remerkleable.core import View
 
@@ -13,6 +13,9 @@ def compute_sync_committee_period(epoch_number):
 
 def is_finality_update(update: LightClientUpdate) -> bool:
     return update.finality_branch != [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
+
+def is_sync_committee_update(update: LightClientUpdate) -> bool:
+    return update.next_sync_committee_branch != [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
 
 def get_active_header(update: LightClientUpdate) -> BeaconBlockHeader:
     # The "active header" is the header that the update is trying to convince us
@@ -69,25 +72,25 @@ def validate_light_client_update(store: LightClientStore,
             root=update.attested_header.state_root,
         )
 
-    print("After I get this part of the function working, commit this as 'Verifies finality branch confirms....' ") 
 
-    # # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
-    # # state of the `active_header`
-    # if not is_sync_committee_update(update):
-    #     assert update_period == finalized_period
-    #     assert update.next_sync_committee == SyncCommittee()
-    # else:
-    #     if update_period == finalized_period:
-    #         assert update.next_sync_committee == store.next_sync_committee
-    #     assert is_valid_merkle_branch(
-    #         leaf=hash_tree_root(update.next_sync_committee),
-    #         branch=update.next_sync_committee_branch,
-    #         depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
-    #         index=get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),
-    #         root=active_header.state_root,
-    #     )
 
-    # sync_aggregate = update.sync_aggregate
+    # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
+    # state of the `active_header`
+    if not is_sync_committee_update(update):
+        assert update_period == finalized_period
+        assert update.next_sync_committee == SyncCommittee()
+    else:
+        if update_period == finalized_period:
+            assert update.next_sync_committee == store.next_sync_committee
+        assert is_valid_merkle_branch(
+            leaf=View.hash_tree_root(update.next_sync_committee),
+            branch=update.next_sync_committee_branch,
+            # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
+            index=NEXT_SYNC_COMMITTEE_INDEX,
+            root=active_header.state_root,
+        )
+
+    sync_aggregate = update.sync_aggregate
 
     # # Verify sync committee has sufficient participants
     # assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
