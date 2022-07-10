@@ -1,4 +1,4 @@
-from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
+from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, MIN_SYNC_COMMITTEE_PARTICIPANTS, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
 from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncCommittee
 from merkletreelogic import floorlog2, is_valid_merkle_branch
 from remerkleable.core import View
@@ -92,8 +92,8 @@ def validate_light_client_update(store: LightClientStore,
 
     sync_aggregate = update.sync_aggregate
 
-    # # Verify sync committee has sufficient participants
-    # assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
+    # Verify sync committee has sufficient participants
+    assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 
     # # Verify sync committee aggregate signature
     # if signature_period == finalized_period:
