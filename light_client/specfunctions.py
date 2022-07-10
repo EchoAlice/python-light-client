@@ -7,6 +7,17 @@ def compute_epoch_at_slot(slot_number):
   epoch = slot_number // SLOTS_PER_EPOCH 
   return epoch
 
+def compute_domain(domain_type: DomainType, fork_version: Version=None, genesis_validators_root: Root=None) -> Domain:
+    """
+    Return the domain for the ``domain_type`` and ``fork_version``.
+    """
+    if fork_version is None:
+        fork_version = GENESIS_FORK_VERSION
+    if genesis_validators_root is None:
+        genesis_validators_root = Root()  # all bytes zero by default
+    fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
+    return Domain(domain_type + fork_data_root[:28])
+
 def compute_sync_committee_period(epoch_number):
   sync_period = epoch_number // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
   return sync_period
@@ -105,6 +116,6 @@ def validate_light_client_update(store: LightClientStore,
     ]
     # fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
     print(fork_version) 
-    # domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
+    domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
     # signing_root = compute_signing_root(update.attested_header, domain)
     # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
