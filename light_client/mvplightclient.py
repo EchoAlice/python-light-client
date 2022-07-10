@@ -298,7 +298,7 @@ if __name__ == "__main__":
   # =================================================== 
   finalized_updates_branch = committee_updates['data'][0]['finality_branch']
   parse_list(finalized_updates_branch) 
-  
+
   # =========================                  
   # SYNC AGGREGATE VARIABLES!                    
   # ========================= 
@@ -324,19 +324,19 @@ if __name__ == "__main__":
   #                         !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!!!
   #                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-  print("attested header slot: " + str(attested_header_slot_number)) 
-  print("finalized header slot: " + str(finalized_updates_slot_number)) 
-  print("bootstrap header slot: " + str(bootstrap_slot)) 
-  print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
-  print('\n') 
+  # print("attested header slot: " + str(attested_header_slot_number)) 
+  # print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  # print("bootstrap header slot: " + str(bootstrap_slot)) 
+  # print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
+  # print('\n') 
    
-  print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
-  print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
-  print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
+  # print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
+  # print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
+  # print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
 
-  print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
-  print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
-  print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
+  # print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
+  # print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
+  # print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
 
 
 
@@ -409,7 +409,7 @@ if __name__ == "__main__":
   # ====================
   #  LIGHT CLIENT UPDATE 
   # ====================
-
+  
   light_client_update = LightClientUpdate(
     attested_header = attested_block_header,
     next_sync_committee = next_sync_committee,
@@ -437,6 +437,7 @@ if __name__ == "__main__":
 
   validate_light_client_update(light_client_store,
                               light_client_update,
+                              fork_version,
                               ) 
 
 

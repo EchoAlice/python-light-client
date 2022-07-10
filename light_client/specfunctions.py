@@ -1,5 +1,5 @@
 from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, MIN_SYNC_COMMITTEE_PARTICIPANTS, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
-from containers import  Bytes32, Slot, Root, BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncCommittee
+from containers import  Bytes32, Root, Slot, Version, BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncCommittee
 from merkletreelogic import floorlog2, is_valid_merkle_branch
 from remerkleable.core import View
 
@@ -36,6 +36,7 @@ def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,
                                 #  current_slot: Slot,
                                 #  genesis_validators_root: Root
+                                fork_version: Version
                                  ) -> None:
     # Verify update slot is larger than slot of current best finalized header
     active_header = get_active_header(update)
@@ -72,8 +73,6 @@ def validate_light_client_update(store: LightClientStore,
             root=update.attested_header.state_root,
         )
 
-
-
     # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
     # state of the `active_header`
     if not is_sync_committee_update(update):
@@ -94,17 +93,18 @@ def validate_light_client_update(store: LightClientStore,
 
     # Verify sync committee has sufficient participants
     assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
-
-    # # Verify sync committee aggregate signature
-    # if signature_period == finalized_period:
-    #     sync_committee = store.current_sync_committee
-    # else:
-    #     sync_committee = store.next_sync_committee
-    # participant_pubkeys = [
-    #     pubkey for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
-    #     if bit
-    # ]
-    # fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))
+    
+    # Verify sync committee aggregate signature
+    if signature_period == finalized_period:
+        sync_committee = store.current_sync_committee
+    else:
+        sync_committee = store.next_sync_committee
+    participant_pubkeys = [                                                                                   
+        pubkey for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
+        if bit
+    ]
+    # fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
+    print(fork_version) 
     # domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
     # signing_root = compute_signing_root(update.attested_header, domain)
     # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
