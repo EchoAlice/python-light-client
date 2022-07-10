@@ -1,5 +1,17 @@
-from constants import EPOCHS_PER_SYNC_COMMITTEE_PERIOD,FINALIZED_ROOT_INDEX, GENESIS_SLOT, MIN_SYNC_COMMITTEE_PARTICIPANTS, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_EPOCH
-from containers import  Bytes32, Root, Slot, Version, BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncCommittee
+from constants import (EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+                        FINALIZED_ROOT_INDEX, 
+                        GENESIS_SLOT, 
+                        MIN_SYNC_COMMITTEE_PARTICIPANTS, 
+                        NEXT_SYNC_COMMITTEE_INDEX, 
+                        SLOTS_PER_EPOCH)
+from containers import (Bytes32, 
+                        Root, 
+                        Slot, 
+                        Version,
+                        BeaconBlockHeader,
+                        LightClientStore, 
+                        LightClientUpdate, 
+                        SyncCommittee)
 from merkletreelogic import floorlog2, is_valid_merkle_branch
 from remerkleable.core import View
 
