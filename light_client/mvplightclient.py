@@ -1,6 +1,13 @@
-# from time import ctime
-from constants import CURRENT_SYNC_COMMITTEE_INDEX, NEXT_SYNC_COMMITTEE_INDEX
-from containers import BeaconBlockHeader, LightClientStore, LightClientUpdate, SyncAggregate, SyncCommittee
+import time
+from time import ctime
+from containers import (CURRENT_SYNC_COMMITTEE_INDEX, 
+                        NEXT_SYNC_COMMITTEE_INDEX,
+                        SECONDS_PER_SLOT, 
+                        BeaconBlockHeader, 
+                        LightClientStore, 
+                        LightClientUpdate,
+                        SyncAggregate, 
+                        SyncCommittee)
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
 from specfunctions import compute_epoch_at_slot, compute_sync_committee_period ,validate_light_client_update
@@ -31,38 +38,45 @@ def parse_list(list):
   for i in range(len(list)):
     list[i] = parse_hex_to_byte(list[i])
 
+class InitializedBeaconBlockHeader:
+  def __init__(self, slot, proposer_index, parent_root, state_root, body_root):
+    self.slot = slot
+    self.proposer_index = proposer_index
+    self.parent_root = parent_root
+    self.state_root = state_root
+    self.body_root = body_root
 
 if __name__ == "__main__":
-  #                                    
-  #                                     \\\\\\\\\\\\\\\\\\\ || ////////////////////
-  #                                      \\\\\\\\\\\\\\\\\\\  ////////////////////
-  #                                      =========================================
-  #                                      INITIALIZATION/BOOTSTRAPPING TO A PERIOD:
-  #                                      =========================================
-  #                                      ///////////////////  \\\\\\\\\\\\\\\\\\\\
-  #                                     /////////////////// || \\\\\\\\\\\\\\\\\\\\
-  #
-  #     Get block header at slot N in period X = N // 16384
-  #     Ask node for current sync committee + proof of checkpoint root
-  #     Node responds with a snapshot
-  #     
-  #     Snapshot contains:
-  #     A. Header- Block's header corresponding to the checkpoint root
-  #     
-  #           The light client stores a header so it can ask for merkle branches to 
-  #           authenticate transactions and state against the header
-  #
-  #     B. Current sync committee- Public Keys and the aggregated pub key of the current sync committee
-  #   
-  #           The purpose of the sync committee is to allow light clients to keep track
-  #           of the chain of beacon block headers. 
-  #           Sync committees are (i) updated infrequently, and (ii) saved directly in the beacon state, 
-  #           allowing light clients to verify the sync committee with a Merkle branch from a 
-  #           block header that they already know about, and use the public keys 
-  #           in the sync committee to directly authenticate signatures of more recent blocks.
-  #   
-  #     C. Current sync committee branch- Proof of the current sync committee in the form of a Merkle branch 
-
+  """                             
+                                      \\\\\\\\\\\\\\\\\\\ || ////////////////////
+                                       \\\\\\\\\\\\\\\\\\\  ////////////////////
+                                       =========================================
+                                       INITIALIZATION/BOOTSTRAPPING TO A PERIOD:
+                                       =========================================
+                                       ///////////////////  \\\\\\\\\\\\\\\\\\\\
+                                      /////////////////// || \\\\\\\\\\\\\\\\\\\\
+  
+      Get block header at slot N in period X = N // 16384
+      Ask node for current sync committee + proof of checkpoint root
+      Node responds with a snapshot
+      
+      Snapshot contains:
+      A. Header- Block's header corresponding to the checkpoint root
+      
+            The light client stores a header so it can ask for merkle branches to 
+            authenticate transactions and state against the header
+  
+      B. Current sync committee- Public Keys and the aggregated pub key of the current sync committee
+    
+            The purpose of the sync committee is to allow light clients to keep track
+            of the chain of beacon block headers. 
+            Sync committees are (i) updated infrequently, and (ii) saved directly in the beacon state, 
+            allowing light clients to verify the sync committee with a Merkle branch from a 
+            block header that they already know about, and use the public keys 
+            in the sync committee to directly authenticate signatures of more recent blocks.
+    
+      C. Current sync committee branch- Proof of the current sync committee in the form of a Merkle branch 
+"""
 
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   # ===================================================================
@@ -78,16 +92,17 @@ if __name__ == "__main__":
   #  ==========
   #  CHECKPOINT
   #  ==========
-  # checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
-  # checkpoint = calls_api(checkpoint_url)
-  # finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
+  checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
+  checkpoint = calls_api(checkpoint_url)
+  finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
   
   #  =========
   #  BOOTSTRAP
   #  =========
   bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038" 
   bootstrap = calls_api(bootstrap_url)
-  
+
+  #  Break up the sections into different functions.  
   #  Block Header Data
   bootstrap_header = bootstrap['data']['header']
   
@@ -197,11 +212,11 @@ if __name__ == "__main__":
   #                                   ///////////////////   |   \\\\\\\\\\\\\\\\\\\\
   #                                  ///////////////////   |||   \\\\\\\\\\\\\\\\\\\\
 
-
-  # "The light client stores the snapshot and fetches committee updates until it reaches the latest sync period."
-  # 
-  # Get sycn period updates from current sync period to latest sync period
+  """
+  "The light client stores the snapshot and fetches committee updates until it reaches the latest sync period."
   
+  Get sycn period updates from current sync period to latest sync period
+  """
   
   #                                    ////////////////////////////////////
   #                                    ====================================
@@ -319,24 +334,25 @@ if __name__ == "__main__":
 
 
 
+  """
+                          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+                          !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!!!!
+                          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  """
 
-  #                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-  #                         !!!!!!!! IMPORTANT BLOCK VALUES !!!!!!!!
-  #                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-  # print("attested header slot: " + str(attested_header_slot_number)) 
-  # print("finalized header slot: " + str(finalized_updates_slot_number)) 
-  # print("bootstrap header slot: " + str(bootstrap_slot)) 
-  # print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
-  # print('\n') 
+  print("attested header slot: " + str(attested_header_slot_number)) 
+  print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  print("bootstrap header slot: " + str(bootstrap_slot)) 
+  print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
+  print('\n') 
    
-  # print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
-  # print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
-  # print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
+  print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
+  print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
+  print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
 
-  # print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
-  # print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
-  # print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
+  print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
+  print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
+  print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
 
 
 
@@ -384,16 +400,21 @@ if __name__ == "__main__":
   # PLACE OBJECTS INTO LIGHT CLIENT STORE AND LIGHT CLIENT UPDATE 
   # -------------------------------------------------------------
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/\\\\\\\\\\\
-   
-  # ===================                                   IMPORTANT QUESTION:
-  #  LIGHT CLIENT STORE        How do I tie the finalized block header back to the bootstrap checkpoint root?
-  # ===================        Because right now there's a gap in the logic:  
-  #                                 Yes the next sync committee hashes against merkle proof to equal the finalized state,
-  #                                 but the finalized state isn't connected back to the checkpoint root.
-  #                                               print(finalized_block_header_root)
-  # 
-  #                            For now, press on and execute spec functions properly
+  
+  """  
+                                     IMPORTANT QUESTION:
 
+          How do I tie the finalized block header back to the bootstrap checkpoint root?
+          Because right now there's a gap in the logic:  
+          Yes the next sync committee hashes against merkle proof to equal the finalized state,
+          but the finalized state isn't connected back to the checkpoint root.
+          print(finalized_block_header_root)
+ 
+                  For now, press on and execute spec functions properly
+  """ 
+  # ===================
+  # LIGHT CLIENT STORE
+  # ===================
   light_client_store =  LightClientStore(
     finalized_header = bootstrap_block_header, 
     current_sync_committee = bootstrap_sync_committee, 
@@ -434,12 +455,30 @@ if __name__ == "__main__":
   #            BRING IN THE MVP SPEC!! 
   # ----------------------------------------------
   # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  """
+  A light client maintains its state in a store object of type LightClientStore and receives update objects of type LightClientUpdate. 
+  Every update triggers process_light_client_update(store, update, current_slot) where current_slot is the current slot based on some local clock.
+  """
 
-  validate_light_client_update(light_client_store,
-                              light_client_update,
-                              fork_version,
-                              ) 
+  current_slot = 420                                   # Where do I get this information?
 
+
+  # Everything that relies on this local clock needs to go inside of this for loop
+  while 1>0:
+    time.sleep(SECONDS_PER_SLOT)
+    current_slot += 1 
+    print(ctime())
+    # print(current_slot)
+
+  # process_slot_for_light_client_store(store: LightClientStore, current_slot: Slot) -> None:
+  
+
+
+
+  # validate_light_client_update(light_client_store,
+  #                             light_client_update,
+  #                             fork_version,
+  #                             ) 
 
 
 
