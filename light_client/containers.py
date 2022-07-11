@@ -23,6 +23,18 @@ Hash32	= Bytes32
 Version	= Bytes4
 BLSPubkey =	Bytes48
 BLSSignature = Bytes96
+DomainType = Bytes4
+
+# Constants
+CURRENT_SYNC_COMMITTEE_INDEX = 54
+DOMAIN_SYNC_COMMITTEE = DomainType('0x07000000') 
+EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
+FINALIZED_ROOT_INDEX = 105   
+GENESIS_SLOT = Slot(0)
+MIN_SYNC_COMMITTEE_PARTICIPANTS = 1
+NEXT_SYNC_COMMITTEE_INDEX = 55
+SLOTS_PER_EPOCH = 32                        #   2**5 
+SYNC_COMMITTEE_SIZE = 512
 
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
 # A Generalized index is a way of referring to a poisition of an object in a merkle tree,
@@ -41,7 +53,8 @@ class BeaconBlockHeader(Container):
   parent_root: Root
   state_root: Root
   body_root: Root
-
+  # __def__init__  define and initialize headers.  Deserialize within the header.  Make a global function, calling a constructor
+    
 class SyncAggregate(Container):
     sync_committee_bits: Bitvector[SYNC_COMMITTEE_SIZE]
     sync_committee_signature: BLSSignature
