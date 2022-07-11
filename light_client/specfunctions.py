@@ -127,7 +127,7 @@ def validate_light_client_update(store: LightClientStore,
         if bit
     ]
     # fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
-    print(fork_version) 
+    
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
     # signing_root = compute_signing_root(update.attested_header, domain)
     # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
