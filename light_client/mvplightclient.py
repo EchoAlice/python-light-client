@@ -1,5 +1,8 @@
+import inspect
 import time
 from time import ctime
+import json
+from types import SimpleNamespace
 from containers import (CURRENT_SYNC_COMMITTEE_INDEX, 
                         NEXT_SYNC_COMMITTEE_INDEX,
                         SECONDS_PER_SLOT, 
@@ -102,16 +105,47 @@ if __name__ == "__main__":
   bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038" 
   bootstrap = calls_api(bootstrap_url)
 
-  #  Break up the sections into different functions.  
   #  Block Header Data
-  bootstrap_header = bootstrap['data']['header']
-  
-  bootstrap_slot = int(bootstrap_header['slot'])
-  bootstrap_proposer_index = int(bootstrap_header['proposer_index'])
-  bootstrap_parent_root = bootstrap_header['parent_root']
-  bootstrap_state_root = bootstrap_header['state_root']
-  bootstrap_body_root = bootstrap_header['body_root']
+  bootstrap_header_dict = bootstrap['data']['header']
+  bootstrap_data = json.dumps(bootstrap_header_dict)                                            #  Converts dictionary to string that json.loads can utilize
+  bootstrap_header = json.loads(bootstrap_data, object_hook=lambda d: SimpleNamespace(**d))     # Parse JSON into an object with attributes corresponding to dict keys.
 
+  # Clean Block Header Data
+  bootstrap_header.slot = int(bootstrap_header.slot)
+  bootstrap_header.proposer_index = int(bootstrap_header.proposer_index)
+  
+  # Create a for loop that cycles through each item in the header, converting hex values to bytes 
+  # parse_object(bootstrap_header)       Currently hard coded.  Fix this
+  bootstrap_header.state_root = parse_hex_to_byte(bootstrap_header.state_root)
+  bootstrap_header.parent_root = parse_hex_to_byte(bootstrap_header.parent_root) 
+  bootstrap_header.body_root = parse_hex_to_byte(bootstrap_header.body_root) 
+
+
+
+  # # This is going to be useless once I get this situation situated
+
+  # bootstrap_header = bootstrap['data']['header']
+
+  # # print(inspect.getmembers(bootstrap_header))
+
+
+  # bootstrap_slot = int(bootstrap_header['slot'])
+  # bootstrap_proposer_index = int(bootstrap_header['proposer_index'])
+  # bootstrap_parent_root = bootstrap_header['parent_root']
+  # bootstrap_state_root = bootstrap_header['state_root']
+  # bootstrap_body_root = bootstrap_header['body_root']
+
+
+  # bootstrap_object = InitializedBeaconBlockHeader(
+  #   slot= int(bootstrap_header['slot']),
+  #   proposer_index= int(bootstrap_header['proposer_index']),
+  #   parent_root= bootstrap_header['parent_root'],
+  #   state_root= bootstrap_header['state_root'],
+  #   body_root= bootstrap_header['body_root']
+  # ) 
+ 
+ 
+ 
   #  Sync Committee Data
   list_of_keys = bootstrap['data']['current_sync_committee']['pubkeys']
   current_aggregate_pubkey = bootstrap['data']['current_sync_committee']['aggregate_pubkey']
@@ -123,9 +157,9 @@ if __name__ == "__main__":
 
   #       Aggregate Key and Header Roots
   current_aggregate_pubkey = parse_hex_to_byte(current_aggregate_pubkey)
-  bootstrap_parent_root = parse_hex_to_byte(bootstrap_parent_root)
-  bootstrap_state_root = parse_hex_to_byte(bootstrap_state_root)
-  bootstrap_body_root = parse_hex_to_byte(bootstrap_body_root)
+  # bootstrap_parent_root = parse_hex_to_byte(bootstrap_parent_root)
+  # bootstrap_state_root = parse_hex_to_byte(bootstrap_state_root)
+  # bootstrap_body_root = parse_hex_to_byte(bootstrap_body_root)
 
   #       List of Keys
   parse_list(list_of_keys) 
@@ -136,12 +170,14 @@ if __name__ == "__main__":
   # ------------------------------------------------------
   # CREATE BOOTSTRAP BLOCK_HEADER AND SYNC COMMITTEE OBJECTS
   # ------------------------------------------------------
+  
+  # Bootstrap_block_header information has been reorganized.  Now do this with the other things 
   bootstrap_block_header =  BeaconBlockHeader(
-    slot = bootstrap_slot, 
-    proposer_index = bootstrap_proposer_index, 
-    parent_root = bootstrap_parent_root,
-    state_root = bootstrap_state_root,
-    body_root = bootstrap_body_root
+    slot = bootstrap_header.slot, 
+    proposer_index = bootstrap_header.proposer_index, 
+    parent_root = bootstrap_header.parent_root,
+    state_root = bootstrap_header.state_root,
+    body_root = bootstrap_header.body_root
   )
 
   bootstrap_sync_committee = SyncCommittee(
@@ -186,7 +222,7 @@ if __name__ == "__main__":
   assert is_valid_merkle_branch(bootstrap_committee_root, 
                                 current_sync_committee_branch, 
                                 CURRENT_SYNC_COMMITTEE_INDEX, 
-                                bootstrap_state_root) 
+                                bootstrap_header.state_root) 
   
   # assert block_header_root == finalized_checkpoint_root   #  <--- Don't think this works right now. Need the bootstrap  
   #                                                                 api call to contain variable checkpoint 
@@ -229,7 +265,7 @@ if __name__ == "__main__":
   # BOOTSTRAP'S NEXT SYNC COMMITTEE VARIABLES!
   # ==========================================
   
-  bootstrap_sync_period = compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))   #  511
+  bootstrap_sync_period = compute_sync_committee_period(compute_epoch_at_slot(bootstrap_header.slot))   #  511
   bootstrap_committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
   bootstrap_committee_updates = calls_api(bootstrap_committee_updates_url)
   
@@ -340,19 +376,19 @@ if __name__ == "__main__":
                           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   """
 
-  print("attested header slot: " + str(attested_header_slot_number)) 
-  print("finalized header slot: " + str(finalized_updates_slot_number)) 
-  print("bootstrap header slot: " + str(bootstrap_slot)) 
-  print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
-  print('\n') 
+  # print("attested header slot: " + str(attested_header_slot_number)) 
+  # print("finalized header slot: " + str(finalized_updates_slot_number)) 
+  # print("bootstrap header slot: " + str(bootstrap_slot)) 
+  # print("Difference between bootstrap root and finalized root: " + str(finalized_updates_slot_number - bootstrap_slot)) 
+  # print('\n') 
    
-  print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
-  print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
-  print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
+  # print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_slot)))
+  # print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_updates_slot_number)))
+  # print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_header_slot_number)))
 
-  print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
-  print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
-  print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
+  # print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_slot))))
+  # print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_updates_slot_number))))
+  # print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_header_slot_number))))
 
 
 
@@ -464,10 +500,10 @@ if __name__ == "__main__":
 
 
   # Everything that relies on this local clock needs to go inside of this for loop
-  while 1>0:
-    time.sleep(SECONDS_PER_SLOT)
-    current_slot += 1 
-    print(ctime())
+  # while 1>0:
+  #   time.sleep(SECONDS_PER_SLOT)
+  #   current_slot += 1 
+  #   print(ctime())
     # print(current_slot)
 
   # process_slot_for_light_client_store(store: LightClientStore, current_slot: Slot) -> None:
