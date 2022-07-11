@@ -1,18 +1,27 @@
-from constants import (EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-                        FINALIZED_ROOT_INDEX, 
+from containers import (DOMAIN_SYNC_COMMITTEE,
+                        EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+                        FINALIZED_ROOT_INDEX,
+                        GENESIS_FORK_VERSION, 
                         GENESIS_SLOT, 
                         MIN_SYNC_COMMITTEE_PARTICIPANTS, 
                         NEXT_SYNC_COMMITTEE_INDEX, 
-                        SLOTS_PER_EPOCH)
-from containers import (Bytes32, 
+                        SLOTS_PER_EPOCH,
+                        Bytes32,
+                        Domain, 
+                        DomainType, 
                         Root, 
-                        Slot, 
+                        Slot,
+                        SSZObject, 
                         Version,
+                        genesis_validators_root,
                         BeaconBlockHeader,
+                        ForkData,
                         LightClientStore, 
                         LightClientUpdate, 
+                        SigningData, 
                         SyncCommittee)
 from merkletreelogic import floorlog2, is_valid_merkle_branch
+from py_ecc import bls
 from remerkleable.core import View
 
 def compute_epoch_at_slot(slot_number):
@@ -29,6 +38,25 @@ def compute_domain(domain_type: DomainType, fork_version: Version=None, genesis_
         genesis_validators_root = Root()  # all bytes zero by default
     fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
     return Domain(domain_type + fork_data_root[:28])
+
+def compute_fork_data_root(current_version: Version, genesis_validators_root: Root) -> Root:
+    """
+    Return the 32-byte fork data root for the ``current_version`` and ``genesis_validators_root``.
+    This is used primarily in signature domains to avoid collisions across forks/chains.
+    """
+    return View.hash_tree_root(ForkData(
+        current_version=current_version,
+        genesis_validators_root=genesis_validators_root,
+    ))
+
+def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
+    """
+    Return the signing root for the corresponding signing data.
+    """
+    return View.hash_tree_root(SigningData(
+        object_root=View.hash_tree_root(ssz_object),
+        domain=domain,
+    ))
 
 def compute_sync_committee_period(epoch_number):
   sync_period = epoch_number // EPOCHS_PER_SYNC_COMMITTEE_PERIOD
@@ -129,5 +157,6 @@ def validate_light_client_update(store: LightClientStore,
     # fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
     
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
-    # signing_root = compute_signing_root(update.attested_header, domain)
-    # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
+    signing_root = compute_signing_root(update.attested_header, domain)
+    assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
+    print("booo yahhh")
