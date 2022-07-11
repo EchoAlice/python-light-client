@@ -6,6 +6,7 @@ from containers import (DOMAIN_SYNC_COMMITTEE,
                         MIN_SYNC_COMMITTEE_PARTICIPANTS, 
                         NEXT_SYNC_COMMITTEE_INDEX, 
                         SLOTS_PER_EPOCH,
+                        UPDATE_TIMEOUT,
                         Bytes32,
                         Domain, 
                         DomainType, 
@@ -14,6 +15,7 @@ from containers import (DOMAIN_SYNC_COMMITTEE,
                         SSZObject, 
                         Version,
                         genesis_validators_root,
+                        uint64,
                         BeaconBlockHeader,
                         ForkData,
                         LightClientStore, 
@@ -77,11 +79,28 @@ def get_active_header(update: LightClientUpdate) -> BeaconBlockHeader:
     else:
         return update.attested_header
 
+def get_safety_threshold(store: LightClientStore) -> uint64:
+    return max(
+        store.previous_max_active_participants,
+        store.current_max_active_participants,
+    ) // 2
 
 
 #                               ==============
 #                                THE BIG BOYS
 #                               ==============
+
+def process_slot_for_light_client_store(store: LightClientStore, current_slot: Slot) -> None:
+    if current_slot % UPDATE_TIMEOUT == 0:
+        store.previous_max_active_participants = store.current_max_active_participants
+        store.current_max_active_participants = 0
+    if (
+        current_slot > store.finalized_header.slot + UPDATE_TIMEOUT
+        and store.best_valid_update is not None
+    ):
+        # Forced best update when the update timeout has elapsed
+        apply_light_client_update(store, store.best_valid_update)
+        store.best_valid_update = None
 
 def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,
@@ -159,4 +178,52 @@ def validate_light_client_update(store: LightClientStore,
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
     signing_root = compute_signing_root(update.attested_header, domain)
     assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
-    print("booo yahhh")
+    print("Validation successful")
+
+def apply_light_client_update(store: LightClientStore, update: LightClientUpdate) -> None:
+    active_header = get_active_header(update)
+    finalized_period = compute_sync_committee_period(compute_epoch_at_slot(store.finalized_header.slot))
+    update_period = compute_sync_committee_period(compute_epoch_at_slot(active_header.slot))
+    if update_period == finalized_period + 1:
+        store.current_sync_committee = store.next_sync_committee
+        store.next_sync_committee = update.next_sync_committee
+    store.finalized_header = active_header
+    if store.finalized_header.slot > store.optimistic_header.slot:
+        store.optimistic_header = store.finalized_header
+
+def process_light_client_update(store: LightClientStore,
+                                update: LightClientUpdate,
+                                current_slot: Slot,
+                                genesis_validators_root: Root) -> None:
+    validate_light_client_update(store, update, current_slot, genesis_validators_root)
+
+    sync_committee_bits = update.sync_aggregate.sync_committee_bits
+
+    # Update the best update in case we have to force-update to it if the timeout elapses
+    if (
+        store.best_valid_update is None
+        or sum(sync_committee_bits) > sum(store.best_valid_update.sync_aggregate.sync_committee_bits)
+    ):
+        store.best_valid_update = update
+
+    # Track the maximum number of active participants in the committee signatures
+    store.current_max_active_participants = max(
+        store.current_max_active_participants,
+        sum(sync_committee_bits),
+    )
+
+    # Update the optimistic header
+    if (
+        sum(sync_committee_bits) > get_safety_threshold(store)
+        and update.attested_header.slot > store.optimistic_header.slot
+    ):
+        store.optimistic_header = update.attested_header
+
+    # Update finalized header
+    if (
+        sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2
+        and is_finality_update(update)
+    ):
+        # Normal update through 2/3 threshold
+        apply_light_client_update(store, update)
+        store.best_valid_update = None
