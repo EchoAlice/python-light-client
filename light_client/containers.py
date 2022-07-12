@@ -1,4 +1,3 @@
-from constants import SYNC_COMMITTEE_SIZE, NEXT_SYNC_COMMITTEE_INDEX, FINALIZED_ROOT_INDEX
 from dataclasses import dataclass
 from merkletreelogic import floorlog2
 from remerkleable.basic import uint64, byte
@@ -24,17 +23,23 @@ Version	= Bytes4
 BLSPubkey =	Bytes48
 BLSSignature = Bytes96
 DomainType = Bytes4
+Domain = Bytes32
+SSZObject = Container                                                    #  Is this correct?
 
 # Constants
 CURRENT_SYNC_COMMITTEE_INDEX = 54
 DOMAIN_SYNC_COMMITTEE = DomainType('0x07000000') 
 EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
 FINALIZED_ROOT_INDEX = 105   
+GENESIS_FORK_VERSION = Version('0x00000000') 
 GENESIS_SLOT = Slot(0)
 MIN_SYNC_COMMITTEE_PARTICIPANTS = 1
 NEXT_SYNC_COMMITTEE_INDEX = 55
+SECONDS_PER_SLOT = 12
 SLOTS_PER_EPOCH = 32                        #   2**5 
 SYNC_COMMITTEE_SIZE = 512
+UPDATE_TIMEOUT = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD 
+
 
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
 # A Generalized index is a way of referring to a poisition of an object in a merkle tree,
@@ -54,7 +59,15 @@ class BeaconBlockHeader(Container):
   state_root: Root
   body_root: Root
   # __def__init__  define and initialize headers.  Deserialize within the header.  Make a global function, calling a constructor
-    
+
+class ForkData(Container):
+    current_version: Version
+    genesis_validators_root: Root
+
+class SigningData(Container):
+    object_root: Root
+    domain: Domain
+
 class SyncAggregate(Container):
     sync_committee_bits: Bitvector[SYNC_COMMITTEE_SIZE]
     sync_committee_signature: BLSSignature

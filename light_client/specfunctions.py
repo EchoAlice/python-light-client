@@ -14,7 +14,6 @@ from containers import (DOMAIN_SYNC_COMMITTEE,
                         Slot,
                         SSZObject, 
                         Version,
-                        genesis_validators_root,
                         uint64,
                         BeaconBlockHeader,
                         ForkData,
@@ -25,6 +24,9 @@ from containers import (DOMAIN_SYNC_COMMITTEE,
 from merkletreelogic import floorlog2, is_valid_merkle_branch
 from py_ecc import bls
 from remerkleable.core import View
+
+
+genesis_validators_root = Root()                                         #  Is this correct?
 
 def compute_epoch_at_slot(slot_number):
   epoch = slot_number // SLOTS_PER_EPOCH 
