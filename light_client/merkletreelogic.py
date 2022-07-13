@@ -14,9 +14,42 @@ def index_to_path(index):
     path = path[2:]
   return path
 
-  # ========================
-  # TEST MERKLE TREE VALUES!
-  # ========================
+def is_valid_merkle_branch(leaf, branch, index, root):
+  node_to_hash = leaf
+  hashed_node = 0
+  path = index_to_path(index)
+  branch_index = 0 
+  # TRAVERSE THE PATH BACKWARDS!
+  for i in range(len(branch), 0, -1):                     
+  # Converts vector[Bytes32] (form of branch in container) to a string of bytes (form my function can manipulate)
+    branch_value = bytes(branch[branch_index])                         
+    if path[i] == '0':
+      hashed_node = hash_pair(node_to_hash, branch_value)
+    if path[i] == '1':
+      hashed_node = hash_pair(branch_value, node_to_hash)
+    if(i == 1):                                
+      # print("hashed node: ") 
+      # print(hashed_node)
+      # print("root: ") 
+      # print(bytes(root)) 
+      if hashed_node == root: 
+        return True
+      else: 
+        return False
+    node_to_hash = hashed_node
+    branch_index += 1
+
+
+
+
+
+
+
+
+
+# ========================
+# TEST MERKLE TREE VALUES!
+# ========================
 
 # # Encodes manual merkle leaves into bytes
 # m_leaf_nodes = ['0', '1', '2', '3', '4', '5', '6', '7']
@@ -83,27 +116,6 @@ def index_to_path(index):
 #     root=update.attested_header.state_root,
 # )
 
-
-def is_valid_merkle_branch(leaf, branch, index, root):
-  node_to_hash = leaf
-  hashed_node = 0
-  path = index_to_path(index)
-  branch_index = 0 
-  # TRAVERSE THE PATH BACKWARDS!
-  for i in range(len(branch), 0, -1):                     
-  # Converts vector[Bytes32] (form of branch in container) to a string of bytes (form my function can manipulate)
-    branch_value = bytes(branch[branch_index])                         
-    if path[i] == '0':
-      hashed_node = hash_pair(node_to_hash, branch_value)
-    if path[i] == '1':
-      hashed_node = hash_pair(branch_value, node_to_hash)
-    if(i == 1):                                
-      if hashed_node == root: 
-        return True
-      else: 
-        return False
-    node_to_hash = hashed_node
-    branch_index += 1
 
 # assert is_valid_merkle_branch(leaf, branch, index, root)
 # print("Wahoo")
