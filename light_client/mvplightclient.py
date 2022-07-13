@@ -5,14 +5,15 @@ from bootstrapapi import (bootstrap_block_header,
                           current_sync_committee_branch)
 from updatesapi import (attested_block_header,
                         finalized_block_header,
-                        finalized_updates_branch,
+                        finality_branch,
+                        fork_version,
+                        next_aggregate_pubkey,
+                        next_list_of_keys,
                         next_sync_committee,
                         next_sync_committee_branch,
                         sync_aggregate,
                         sync_committee_bits,
                         sync_committee_signature,
-                        updates_aggregate_pubkey,
-                        updates_list_of_keys,
 )
 from containers import (CURRENT_SYNC_COMMITTEE_INDEX, 
                         NEXT_SYNC_COMMITTEE_INDEX,
@@ -24,7 +25,7 @@ from containers import (CURRENT_SYNC_COMMITTEE_INDEX,
                         SyncCommittee)
 from merkletreelogic import is_valid_merkle_branch 
 from remerkleable.core import View
-from specfunctions import compute_epoch_at_slot, compute_sync_committee_period ,validate_light_client_update
+from specfunctions import compute_epoch_at_slot, compute_sync_committee_period_at_slot, process_slot_for_light_client_store,validate_light_client_update
 import time
 from time import ctime
 import inspect
@@ -173,19 +174,20 @@ if __name__ == "__main__":
                           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   """
 
-  # print("attested header slot: " + str(attested_block_header.slot)) 
-  # print("finalized header slot: " + str(finalized_block_header.slot)) 
-  # print("bootstrap header slot: " + str(bootstrap_block_header.slot)) 
-  # print("Difference between bootstrap root and finalized root: " + str(finalized_block_header.slot-bootstrap_block_header.slot)) 
-  # print('\n') 
-   
-  # print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_block_header.slot)))
-  # print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_block_header.slot)))
-  # print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_block_header.slot)))
-
-  # print("Bootstrap block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(bootstrap_block_header.slot))))
-  # print("Finalized block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(finalized_block_header.slot))))
-  # print("Attested block's sync period: " + str(compute_sync_committee_period(compute_epoch_at_slot(attested_block_header.slot))))
+  print('\n') 
+  print("attested header slot: " + str(attested_block_header.slot)) 
+  print("finalized header slot: " + str(finalized_block_header.slot)) 
+  print("bootstrap header slot: " + str(bootstrap_block_header.slot)) 
+  print("Difference between bootstrap root and finalized root: " + str(finalized_block_header.slot-bootstrap_block_header.slot)) 
+  print('\n') 
+  print("Bootstrap block's epoch: " + str(compute_epoch_at_slot(bootstrap_block_header.slot)))
+  print("Finalized block's epoch: " + str(compute_epoch_at_slot(finalized_block_header.slot)))
+  print("Attested block's epoch: " + str(compute_epoch_at_slot(attested_block_header.slot)))
+  print('\n') 
+  print("Bootstrap block's sync period: " + str(compute_sync_committee_period_at_slot(bootstrap_block_header.slot)))
+  print("Finalized block's sync period: " + str(compute_sync_committee_period_at_slot(finalized_block_header.slot)))
+  print("Attested block's sync period: " + str(compute_sync_committee_period_at_slot(attested_block_header.slot)))
+  print('\n') 
 
 
 
@@ -200,13 +202,6 @@ if __name__ == "__main__":
   finalized_block_header_root =  View.hash_tree_root(finalized_block_header)
   sync_aggregate_root =  View.hash_tree_root(sync_aggregate)
 
-
-
-  # //////////////////////////////////////////////////////////////
-  # -------------------------------------------------------------
-  # PLACE OBJECTS INTO LIGHT CLIENT STORE AND LIGHT CLIENT UPDATE 
-  # -------------------------------------------------------------
-  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/\\\\\\\\\\\
   
   """  
                                      IMPORTANT QUESTION:
@@ -219,39 +214,49 @@ if __name__ == "__main__":
  
                   For now, press on and execute spec functions properly
   """ 
+
+
+  # //////////////////////////////////////////////////////////////
+  # -------------------------------------------------------------
+  # PLACE OBJECTS INTO LIGHT CLIENT STORE AND LIGHT CLIENT UPDATE 
+  # -------------------------------------------------------------
+  # \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/\\\\\\\\\\\
+  
   # ===================
   # LIGHT CLIENT STORE
-  # ===================
+  # ===================                                Should the finalized header be the bootstrap header?  Do I have the right things in the store container?  Look at Clara's code
   light_client_store =  LightClientStore(
     finalized_header = bootstrap_block_header, 
     current_sync_committee = bootstrap_sync_committee, 
     next_sync_committee = bootstrap_next_sync_committee,
 
-    #                              Figure out what these values are 
+    #                              Figure out what these values are.     I believe all "None" until we get to the current sync period 
     # best_valid_update = ,
     # optimistic_header = ,
     # previous_max_active_participants = ,
     # current_max_active_participants = 
   )
 
+
+  current_slot = 4198846 + 6                                   # Where do I get this information?
+
   # ====================
   #  LIGHT CLIENT UPDATE 
   # ====================
-  
+
   light_client_update = LightClientUpdate(
     attested_header = attested_block_header,
     next_sync_committee = next_sync_committee,
     next_sync_committee_branch = next_sync_committee_branch,
     finalized_header = finalized_block_header,
-    finality_branch = finalized_updates_branch,
+    finality_branch = finality_branch,
     # A record of which validators in the current sync committee voted for the chain head in the previous slot
     #
     # Contains the sync committee's bitfield and signature required for verifying the attested header
     sync_aggregate = sync_aggregate,
     # Slot at which the aggregate signature was created (untrusted)    I don't know this value
-    signature_slot =  attested_block_header.slot - 1 
+    signature_slot =  current_slot - 1 
   )
-
   # print(committee_updates) 
 
 
@@ -267,15 +272,23 @@ if __name__ == "__main__":
   Every update triggers process_light_client_update(store, update, current_slot) where current_slot is the current slot based on some local clock.
   """
 
-  current_slot = 420                                   # Where do I get this information?
+
+  # Before I start using the local clock mechanism, I need to get to the current sync committee
+  # This means continually fetching the committee updates UNTIL there are no more updates to fetch.
 
 
-  # Everything that relies on this local clock needs to go inside of this for loop
+  # # Everything that relies on this local clock needs to go inside of this for loop
+  # # 
   # while 1>0:
+  #   # Increment the current slot every 12 seconds.  When slot increments, process slot
   #   time.sleep(SECONDS_PER_SLOT)
   #   current_slot += 1 
+  #   process_slot_for_light_client_store(
+  #     light_client_store,
+  #     current_slot
+  #   )  
   #   print(ctime())
-    # print(current_slot)
+  #   print(current_slot)
 
   # process_slot_for_light_client_store(store: LightClientStore, current_slot: Slot) -> None:
   
