@@ -3,6 +3,7 @@ from merkletreelogic import floorlog2
 from remerkleable.basic import uint64, byte
 from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
+from typing import Optional
 
 # Alliases:  (Helps readability of code)
 Bytes4 = Vector[byte, 4]
@@ -38,7 +39,8 @@ NEXT_SYNC_COMMITTEE_INDEX = 55
 SECONDS_PER_SLOT = 12
 SLOTS_PER_EPOCH = 32                        #   2**5 
 SYNC_COMMITTEE_SIZE = 512
-UPDATE_TIMEOUT = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD 
+SLOTS_PER_SYNC_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+UPDATE_TIMEOUT = SLOTS_PER_SYNC_PERIOD 
 
 
 # Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
@@ -76,7 +78,7 @@ class SyncCommittee(Container):
   pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
   aggregate_pubkey: BLSPubkey
 
-# This is the data we request to stay synced.  We need an update every 27(ish) hours
+# This is the data we request to stay synced.  We need an update every... epoch or sync period change?
 class LightClientUpdate(Container):
   # The beacon block header that is attested to by the sync committee
   attested_header: BeaconBlockHeader
@@ -100,11 +102,10 @@ class LightClientStore(object):
   # Sync committees corresponding to the header
   current_sync_committee: SyncCommittee
   next_sync_committee: SyncCommittee
-  
-  # # Best available header to switch finalized head to if we see nothing else
-  # best_valid_update: Optional[LightClientUpdate]
-  # # Most recent available reasonably-safe header
-  # optimistic_header: BeaconBlockHeader
-  # # Max number of active participants in a sync committee (used to calculate safety threshold)
-  # previous_max_active_participants: uint64
-  # current_max_active_participants: uint64
+  # Best available header to switch finalized head to if we see nothing else
+  best_valid_update: Optional[LightClientUpdate]
+  # Most recent available reasonably-safe header
+  optimistic_header: BeaconBlockHeader
+  # Max number of active participants in a sync committee (used to calculate safety threshold)
+  previous_max_active_participants: uint64
+  current_max_active_participants: uint64

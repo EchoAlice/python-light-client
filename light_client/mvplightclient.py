@@ -229,12 +229,10 @@ if __name__ == "__main__":
     finalized_header = bootstrap_block_header, 
     current_sync_committee = bootstrap_sync_committee, 
     next_sync_committee = bootstrap_next_sync_committee,
-
-    #                              Figure out what these values are.     I believe all "None" until we get to the current sync period 
-    # best_valid_update = ,
-    # optimistic_header = ,
-    # previous_max_active_participants = ,
-    # current_max_active_participants = 
+    best_valid_update = None,
+    optimistic_header = None,
+    previous_max_active_participants = None,
+    current_max_active_participants = None
   )
 
 
