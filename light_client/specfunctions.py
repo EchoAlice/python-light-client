@@ -125,11 +125,15 @@ def get_active_header(update: LightClientUpdate) -> BeaconBlockHeader:
     else:
         return update.attested_header
 
+def is_next_sync_committee_known(store: LightClientStore) -> bool:
+    return store.next_sync_committee != SyncCommittee()
+
 def get_safety_threshold(store: LightClientStore) -> uint64:
     return max(
         store.previous_max_active_participants,
         store.current_max_active_participants,
     ) // 2
+
 
 #                                           \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
 #                                            \ =========================== /
@@ -225,11 +229,20 @@ def validate_light_client_update(store: LightClientStore,
     assert current_slot >= update.signature_slot > update.attested_header.slot >= update.finalized_header.slot 
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.slot)
     update_signature_period = compute_sync_committee_period_at_slot(update.signature_slot)
-    assert update_signature_period in (store_period, store_period + 1)
+    if is_next_sync_committee_known(store):  
+        assert update_signature_period in (store_period, store_period + 1)
+    else:
+        assert update_signature_period == store_period
 
     # Verify update is relevant
     update_attested_period = compute_sync_committee_period_at_slot(update.attested_header.slot)
-    assert update.attested_header.slot > store.finalized_header.slot
+    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (
+        is_sync_committee_update(update) and update_attested_period == store_period
+    )
+    assert (
+        update.attested_header.slot > store.finalized_header.slot
+        or update_has_next_sync_committee
+    )
 
     # Verify that the `finality_branch`, if present, confirms `finalized_header`
     # to match the finalized checkpoint root saved in the state of `attested_header`.
@@ -249,7 +262,6 @@ def validate_light_client_update(store: LightClientStore,
             index=FINALIZED_ROOT_INDEX,                       # index=get_subtree_index(FINALIZED_ROOT_INDEX),        <--- Ethereum's version of this parameter         
             root=update.attested_header.state_root,
         )
-
 
     # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
     # state of the `attested_header`
@@ -297,21 +309,22 @@ def validate_light_client_update(store: LightClientStore,
 def apply_light_client_update(store: LightClientStore, update: LightClientUpdate) -> None:
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.slot)
     update_finalized_period = compute_sync_committee_period_at_slot(update.finalized_header.slot)
-    if update_finalized_period == store_period + 1:
+    if not is_next_sync_committee_known(store):
+        assert update_finalized_period == store_period
+        store.next_sync_committee = update.next_sync_committee
+    elif update_finalized_period == store_period + 1:
         store.current_sync_committee = store.next_sync_committee
         store.next_sync_committee = update.next_sync_committee
-    store.finalized_header = update.finalized_header
-    if store.finalized_header.slot > store.optimistic_header.slot:
-        store.optimistic_header = store.finalized_header
-
+    if update.finalized_header.slot > store.finalized_header.slot:
+        store.finalized_header = update.finalized_header
+        if store.finalized_header.slot > store.optimistic_header.slot:
+            store.optimistic_header = store.finalized_header
 
 def process_light_client_update(store: LightClientStore,
                                 update: LightClientUpdate,
                                 current_slot: Slot,
-                                genesis_validators_root: Root,
-                                fork_version: Version             # I added in fork version because idk how to calculate it   
-                                ) -> None:
-    validate_light_client_update(store, update, current_slot, genesis_validators_root, fork_version)
+                                genesis_validators_root: Root) -> None:
+    validate_light_client_update(store, update, current_slot, genesis_validators_root)
 
     sync_committee_bits = update.sync_aggregate.sync_committee_bits
 
@@ -336,9 +349,19 @@ def process_light_client_update(store: LightClientStore,
         store.optimistic_header = update.attested_header
 
     # Update finalized header
+    update_has_finalized_next_sync_committee = (
+        not is_next_sync_committee_known(store)
+        and is_sync_committee_update(update) and is_finality_update(update) and (
+            compute_sync_committee_period_at_slot(update.finalized_header.slot)
+            == compute_sync_committee_period_at_slot(update.attested_header.slot)
+        )
+    )
     if (
         sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2
-        and update.finalized_header.slot > store.finalized_header.slot
+        and (
+            update.finalized_header.slot > store.finalized_header.slot
+            or update_has_finalized_next_sync_committee
+        )
     ):
         # Normal update through 2/3 threshold
         apply_light_client_update(store, update)
