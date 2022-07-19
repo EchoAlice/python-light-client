@@ -1,15 +1,7 @@
 import json
-from turtle import update
 import requests
-import time
 from containers import Root, UPDATE_TIMEOUT, BeaconBlockHeader, LightClientStore, LightClientUpdate,SyncAggregate, SyncCommittee
-from time import ctime
 from specfunctions import compute_sync_committee_period_at_slot, process_light_client_update
-# from bootstrapapi import (bootstrap_block_header,
-#                           bootstrap_header, 
-#                           bootstrap_next_sync_committee, 
-#                           bootstrap_sync_committee, 
-#                           current_sync_committee_branch)
 
 def calls_api(url):
   response = requests.get(url)
@@ -38,6 +30,41 @@ def updates_for_period(sync_period):
   response = calls_api(updates_url)
   return response
 
+def initializes_block_header(header_message):
+  block_header = BeaconBlockHeader (
+    slot =  int(header_message['slot']),
+    proposer_index = int(header_message['proposer_index']),
+    parent_root = parse_hex_to_byte(header_message['parent_root']),
+    state_root = parse_hex_to_byte(header_message['state_root']),
+    body_root = parse_hex_to_byte(header_message['body_root'])
+  )
+  return block_header
+
+# For some reason, I can't parse the list of keys or the agg pub key within the sync committee object
+def initializes_sync_committee(committee_message):
+  list_of_keys = committee_message['pubkeys']
+  aggregate_pubkey = committee_message['aggregate_pubkey']
+  parse_list(list_of_keys)
+  aggregate_pubkey = parse_hex_to_byte(aggregate_pubkey)
+  
+  sync_committee = SyncCommittee(
+    pubkeys = list_of_keys,
+    aggregate_pubkey = aggregate_pubkey
+  )
+  return sync_committee
+
+# See if I can compress this... I run into errors when i try  :/  
+def initializes_sync_aggregate(aggregate_message):
+  sync_committee_hex = aggregate_message['sync_committee_bits']
+  sync_committee_signature = aggregate_message['sync_committee_signature']
+  sync_committee_bits = parse_hex_to_bit(sync_committee_hex) 
+  sync_committee_signature = parse_hex_to_byte(sync_committee_signature)
+
+  sync_aggregate = SyncAggregate(
+    sync_committee_bits = sync_committee_bits, 
+    sync_committee_signature = sync_committee_signature 
+  )
+  return sync_aggregate
 
 
 #                                                \~~~~~~~~~~~~~~~~~~/
@@ -46,74 +73,30 @@ def updates_for_period(sync_period):
 #                                                 / ============== \
 #                                                /~~~~~~~~~~~~~~~~~~\
 
+
 def instantiates_sync_period_data(sync_period):
   updates = updates_for_period(sync_period).json()
 
-  attested_header = updates['data'][0]['attested_header']
-  attested_block_header = BeaconBlockHeader (
-    slot = int(attested_header['slot']),
-    proposer_index = int(attested_header['proposer_index']),
-    parent_root =  parse_hex_to_byte(attested_header['parent_root']),
-    state_root =  parse_hex_to_byte(attested_header['state_root']),
-    body_root =  parse_hex_to_byte(attested_header['body_root'])
-  )
-  
+  attested_header_message = updates['data'][0]['attested_header']
+  attested_block_header = initializes_block_header(attested_header_message) 
 
-  next_sync_committee = updates['data'][0]['next_sync_committee']
-  next_list_of_keys = next_sync_committee['pubkeys']
-  next_aggregate_pubkey = next_sync_committee['aggregate_pubkey']
-  parse_list(next_list_of_keys)
-  next_aggregate_pubkey = parse_hex_to_byte(next_aggregate_pubkey)
- 
-  next_sync_committee = SyncCommittee(
-    pubkeys = next_list_of_keys,
-    aggregate_pubkey = next_aggregate_pubkey
-  )
-
+  next_sync_committee_message = updates['data'][0]['next_sync_committee']
+  next_sync_committee = initializes_sync_committee(next_sync_committee_message)
   next_sync_committee_branch = updates['data'][0]['next_sync_committee_branch']
   parse_list(next_sync_committee_branch)
 
-
-  finalized_header =  updates['data'][0]['finalized_header']
-  finalized_block_header = BeaconBlockHeader (
-    slot = int(finalized_header['slot']),
-    proposer_index = int(finalized_header['proposer_index']),
-    parent_root =  parse_hex_to_byte(finalized_header['parent_root']),
-    state_root =  parse_hex_to_byte(finalized_header['state_root']),
-    body_root =  parse_hex_to_byte(finalized_header['body_root'])
-  )
-  
+  finalized_header_message =  updates['data'][0]['finalized_header']
+  finalized_block_header = initializes_block_header(finalized_header_message) 
   finality_branch = updates['data'][0]['finality_branch']
   parse_list(finality_branch) 
 
-  
-  sync_aggregate = updates['data'][0]['sync_aggregate']
-  sync_committee_hex = sync_aggregate['sync_committee_bits']
-  sync_committee_signature = sync_aggregate['sync_committee_signature']
-  sync_committee_bits = parse_hex_to_bit(sync_committee_hex) 
-  sync_committee_signature = parse_hex_to_byte(sync_committee_signature)
+  sync_aggregate_message = updates['data'][0]['sync_aggregate']
+  sync_aggregate = initializes_sync_aggregate(sync_aggregate_message)
 
-  sync_aggregate = SyncAggregate(
-    sync_committee_bits = sync_committee_bits, 
-    sync_committee_signature = sync_committee_signature 
-  )
-
-  
   fork_version =  updates['data'][0]['fork_version']
   fork_version = parse_hex_to_byte(fork_version)
 
 
-  # # Places all information into objects
-  # light_client_store =  LightClientStore(
-  #   finalized_header = bootstrap_block_header, 
-  #   current_sync_committee = bootstrap_sync_committee, 
-  #   next_sync_committee = bootstrap_next_sync_committee,
-  #   best_valid_update = None,
-  #   optimistic_header = None,
-  #   previous_max_active_participants = None,
-  #   current_max_active_participants = None
-  # )
-  
   light_client_update = LightClientUpdate(
     attested_header = attested_block_header,
     next_sync_committee = next_sync_committee,
@@ -124,86 +107,11 @@ def instantiates_sync_period_data(sync_period):
     # Contains the sync committee's bitfield and signature required for verifying the attested header.                                   @ben_eddington
     #
     sync_aggregate = sync_aggregate,
-    # Slot at which the aggregate signature was created (untrusted)    
-    signature_slot =  attested_block_header.slot + 1 
+    signature_slot =  attested_block_header.slot + 1                  # Slot at which the aggregate signature was created (untrusted)    
   )
 
-  # print('\n') 
-  # print("Current sync period: " + str(sync_period)) 
+  return light_client_update
 
-  # return light_client_store, light_client_update, fork_version
-  return light_client_update, fork_version
-
-
-
-# # Incorperate syncing to period inside of this function as well
-# # def syncs_to_current_period(bootstrap_period) -> int:
-# #
-# def sync_to_current_period(bootstrap_period) -> int:
-#   sync_period = bootstrap_period 
-#   current_slot = 0 
-#   while 1>0:
-#     response = updates_for_period(sync_period)
-#     updates = response.json()
-#     updates_status_code = response.status_code
-   
-#     # Checks if api call executed properly 
-#     if updates_status_code == 500:
-#       sync_period = sync_period - 1 
-#       return sync_period
-#     else:
-#       light_client_store, light_client_update, fork_version = instantiates_sync_period_data(sync_period)
-
-#       # TEST VALUES!
-#       # I need a function:      get_current_slot()         <---- I believe this is somewhere in beacon chain spec  
-#       current_slot = light_client_update.signature_slot
-#       genesis_validators_root = Root()
-
-      
-#       # I have to update individual attributes, can't update a whole finalized header at once.  
-#       # Why?? The spec says you can update the entire finalized header, not just individual values
-#       # 
-#       #  THIS FUNCTION IS THE ANTITHESIS OF WHAT UPDATESAPI.PY IS CONVERGING TOWARDS!      Ooooooooh aaaaaaah
-#       # process_light_client_update(light_client_store, 
-#       #                             light_client_update, 
-#       #                             current_slot,
-#       #                             genesis_validators_root,
-#       #                             fork_version
-#       # )                   
-
-#       # When process_light_client_update() is running smoothly, this state transition has already occured.
-#       # Specifically, within apply_light_client_update()
-#       light_client_store.finalized_header.slot = light_client_update.finalized_header.slot
-      
-#       # Increment the sync period every 12 seconds.
-#       time.sleep(1)
-#       sync_period += 1
-
-# bootstrap_period = 512
-# current_period = sync_to_current_period(bootstrap_period)
-# # print("Current period: " + str(current_period))
-
-
-
-
-
-
-
-
-
-
-      #  IMPORTANT VALUES!
-      # print("Store's finalized_header: ")
-      # print("Slot: " + str(light_client_store.finalized_header.slot))
-      # print("Store's sync period: " + str(compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)))
-      # print('\n') 
-      # print("Update's finalized_header: ")
-      # print("Slot: " + str(light_client_update.finalized_header.slot))
-      # print("Sync period: " + str(compute_sync_committee_period_at_slot(light_client_update.finalized_header.slot)))
-      # print('\n') 
-      # print("Update's attested_header: ")
-      # print("Slot: " + str(light_client_update.attested_header.slot))
-      # print("Sync period: " + str(compute_sync_committee_period_at_slot(light_client_update.attested_header.slot)))
-      # print('\n') 
-
-      # print("Diff btwn update.attested_header.slot and update.finalized_header.slot: " + str(light_client_update.attested_header.slot - light_client_update.finalized_header.slot )) 
+# What does this function do?
+#   Organize the  
+# def instantiates_____________():
