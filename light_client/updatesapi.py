@@ -26,7 +26,7 @@ def parse_list(list):
 
 def updates_for_period(sync_period):
   sync_period = str(sync_period) 
-  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period="+sync_period+"&count=1" 
+  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/sync_period_update?start_period="+sync_period+"&count=1" 
   response = calls_api(updates_url)
   return response
 
@@ -75,25 +75,28 @@ def initializes_sync_aggregate(aggregate_message):
 
 
 def instantiates_sync_period_data(sync_period):
-  updates = updates_for_period(sync_period).json()
-
-  attested_header_message = updates['data'][0]['attested_header']
+  sync_period_update = updates_for_period(sync_period).json()
+  print(sync_period_update)
+  
+  attested_header_message = sync_period_update['data'][0]['attested_header']
+  # Problem here! 
+  print(attested_header_message) 
   attested_block_header = initializes_block_header(attested_header_message) 
 
-  next_sync_committee_message = updates['data'][0]['next_sync_committee']
+  next_sync_committee_message = sync_period_update['data'][0]['next_sync_committee']
   next_sync_committee = initializes_sync_committee(next_sync_committee_message)
-  next_sync_committee_branch = updates['data'][0]['next_sync_committee_branch']
+  next_sync_committee_branch = sync_period_update['data'][0]['next_sync_committee_branch']
   parse_list(next_sync_committee_branch)
 
-  finalized_header_message =  updates['data'][0]['finalized_header']
+  finalized_header_message =  sync_period_update['data'][0]['finalized_header']
   finalized_block_header = initializes_block_header(finalized_header_message) 
-  finality_branch = updates['data'][0]['finality_branch']
+  finality_branch = sync_period_update['data'][0]['finality_branch']
   parse_list(finality_branch) 
 
-  sync_aggregate_message = updates['data'][0]['sync_aggregate']
+  sync_aggregate_message = sync_period_update['data'][0]['sync_aggregate']
   sync_aggregate = initializes_sync_aggregate(sync_aggregate_message)
 
-  fork_version =  updates['data'][0]['fork_version']
+  fork_version =  sync_period_update['data'][0]['fork_version']
   fork_version = parse_hex_to_byte(fork_version)
 
 
@@ -112,6 +115,5 @@ def instantiates_sync_period_data(sync_period):
 
   return light_client_update
 
-# What does this function do?
-#   Organize the  
-# def instantiates_____________():
+# This function should be broken up into individual functions and called when appropriate inside of mvplightclient.py
+# def instantiates_current_update_data(current_slot):

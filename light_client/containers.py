@@ -4,6 +4,7 @@ from remerkleable.basic import uint64, byte
 from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
 from typing import Optional
+import time
 
 # Alliases:  (Helps readability of code)
 Bytes4 = Vector[byte, 4]
@@ -28,12 +29,15 @@ Domain = Bytes32
 SSZObject = Container                                                    #  Is this correct?
 
 # Constants
+ALTAIR_FORK_EPOCH =	Epoch(74240)
+ALTAIR_FORK_VERSION =	Version('0x01000000')
 CURRENT_SYNC_COMMITTEE_INDEX = 54
 DOMAIN_SYNC_COMMITTEE = DomainType('0x07000000') 
 EPOCHS_PER_SYNC_COMMITTEE_PERIOD = 256      #   2**8
 FINALIZED_ROOT_INDEX = 105   
 GENESIS_FORK_VERSION = Version('0x00000000') 
 GENESIS_SLOT = Slot(0)
+MIN_GENESIS_TIME = uint64(1606824000)
 MIN_SYNC_COMMITTEE_PARTICIPANTS = 1
 NEXT_SYNC_COMMITTEE_INDEX = 55
 SECONDS_PER_SLOT = 12
@@ -60,7 +64,6 @@ class BeaconBlockHeader(Container):
   parent_root: Root
   state_root: Root
   body_root: Root
-  # __def__init__  define and initialize headers.  Deserialize within the header.  Make a global function, calling a constructor
 
 class ForkData(Container):
     current_version: Version
@@ -77,6 +80,14 @@ class SyncAggregate(Container):
 class SyncCommittee(Container):
   pubkeys: Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
   aggregate_pubkey: BLSPubkey
+
+class LightClientBootstrap(Container):
+    # The requested beacon block header
+    header: BeaconBlockHeader
+    # Current sync committee corresponding to `header`
+    current_sync_committee: SyncCommittee
+    current_sync_committee_branch: Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_INDEX)]
+
 
 # This is the data we request to stay synced.  We need an update every... epoch or sync period change?
 class LightClientUpdate(Container):

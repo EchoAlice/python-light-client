@@ -1,5 +1,6 @@
 import json
 import requests
+from specfunctions import compute_sync_committee_period_at_slot
 from containers import BeaconBlockHeader, LightClientBootstrap, SyncCommittee
 
 def calls_api(url):
@@ -62,54 +63,22 @@ bootstrap_object = LightClientBootstrap(
 )
 
 
+""" 
+Introduces a new `LightClientBootstrap` structure to allow setting up a
+`LightClientStore` with the initial sync committee and block header from
+a user-configured trusted block root.
 
+This leads to new cases where the `LightClientStore` is only aware of
+the current but not the next sync committee. As a side effect of these
+new cases, the store's `finalized_header` may now  advance into the next
+sync committee period before a corresponding `LightClientUpdate` with
+the new sync committee is obtained, improving responsiveness.
 
+Note that so far, `LightClientUpdate.attested_header.slot` needed to be
+newer than `LightClientStore.finalized_header.slot`. However, it is now
+necessary to also consider certain older updates to try and backfill the
+`next_sync_committee`. The `is_better_update` helper is also updated to
+improve `best_valid_update` tracking.
 
-
-
-
-
-
-
-
-
-"""
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-"""
-
-
-# #                                    ////////////////////////////////////
-# #                                    ====================================
-# #                                    TURN DATA FROM UPDATE INTO VARIABLES
-# #                                    ====================================
-# #                                    \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-
-# # ==========================================
-# # BOOTSTRAP'S NEXT SYNC COMMITTEE VARIABLES!
-# # ==========================================
-
-# bootstrap_sync_period = compute_sync_committee_period_at_slot(bootstrap_block_header.slot)   #  511
-# bootstrap_committee_updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period=511&count=1" 
-# bootstrap_committee_updates = calls_api(bootstrap_committee_updates_url)
-
-# bootstrap_next_sync_committee = bootstrap_committee_updates['data'][0]['next_sync_committee']
-# bootstrap_next_list_of_keys = bootstrap_next_sync_committee['pubkeys']
-# bootstrap_next_aggregate_pubkey = bootstrap_next_sync_committee['aggregate_pubkey']
-
-# # From hex to bytes
-# parse_list(bootstrap_next_list_of_keys)
-# bootstrap_next_aggregate_pubkey = parse_hex_to_byte(bootstrap_next_aggregate_pubkey)
-
-# # Create bootstrap's next sync committee 
-# bootstrap_next_sync_committee = SyncCommittee(
-#   pubkeys = bootstrap_next_list_of_keys,
-#   aggregate_pubkey = bootstrap_next_aggregate_pubkey
-# )
-
-
-"""
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          - Etan Status:    commit 654970c6057011e407299a61610c697662c335bd
 """

@@ -2,10 +2,12 @@ from bootstrapapi import (bootstrap_object,
                           bootstrap_block_header,
                           bootstrap_sync_committee,
                           trusted_block_root)
-from containers import (current_time, 
-                        Root, 
+from containers import (Root,
+                        EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
                         MIN_GENESIS_TIME, 
                         SECONDS_PER_SLOT,
+                        SLOTS_PER_EPOCH,
+                        uint64,
                         BeaconBlockHeader)
 from updatesapi import instantiates_sync_period_data, updates_for_period
 from specfunctions import (compute_sync_committee_period_at_slot, 
@@ -13,7 +15,6 @@ from specfunctions import (compute_sync_committee_period_at_slot,
                            process_light_client_update, 
                            process_slot_for_light_client_store)
 import time
-from time import ctime
 import json
 import requests
 
@@ -21,14 +22,6 @@ def calls_api(url):
   response = requests.get(url)
   json_object = response.json() 
   return json_object
-
-"""
-  Asynchronously, a light client maintains a local clock for the current slot, epoch, and sync  
-  period, knowing exactly when the sync committee changes and to request a header update.
-"""
-def get_current_slot(current_time, genesis_time):
-  current_slot = (current_time - genesis_time) // SECONDS_PER_SLOT
-  return current_slot
 
 def parse_hex_to_bit(hex_string):
   int_representation = int(hex_string, 16)
@@ -47,6 +40,22 @@ def parse_list(list):
   for i in range(len(list)):
     list[i] = parse_hex_to_byte(list[i])
 
+"""
+  Asynchronously, a light client maintains a local clock for the current slot, epoch, and sync  
+  period, knowing exactly when the sync committee changes and to request a header update.
+"""
+def get_current_slot(current_time, genesis_time):
+  current_slot = (current_time - genesis_time) // SECONDS_PER_SLOT
+  return current_slot
+
+def get_current_epoch(current_time, genesis_time):
+  current_epoch = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH)
+  return current_epoch
+
+def get_current_sync_period(current_time, genesis_time):
+  current_epoch = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+  return current_epoch
+
 # Incorperate syncing to period inside of this function as well
 # def syncs_to_current_period(bootstrap_period) -> int:
 #
@@ -64,8 +73,8 @@ def sync_to_current_period(light_client_store) -> int:
     else:
       light_client_update = instantiates_sync_period_data(sync_period)
 
-      # TEST VALUE!                   Current attested slot + 1000000
-      current_slot = 42527410                                        
+      current_time = uint64(int(time.time()))
+      current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
       genesis_validators_root = Root()
 
       #  THIS FUNCTION IS THE ANTITHESIS OF WHAT UPDATESAPI.PY IS CONVERGING TOWARDS!
@@ -85,45 +94,74 @@ def sync_to_current_period(light_client_store) -> int:
       time.sleep(1)
       sync_period += 1
 
-def sync_to_current_slot(current_period) -> BeaconBlockHeader:
+# Maybe I should just sync to the current finalized header... The attested header updates aren't super reliable with Lodestar
+
+def sync_to_current_slot() -> BeaconBlockHeader:
   while 1>0:
-    # Make update beacon_block_header calls to _________
+    # Make api call.  See if the call updates every cycle    
+    current_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/finality_update/" 
+    current_update = calls_api(current_update_url).json()
+    print(current_update) 
+    # Get to current finalized header.  Continuously call the update from here on out 
+    # Make update beacon_block_header calls to "/eth/v1/light_client/finality_update/" 
     
-    # Random to stop warning 
-    print(current_period) 
+    # current_attested_header = current_update['data']['attested_header']
+
+    time.sleep(12)
 
   current_block_header = "dummy" 
   return current_block_header
 
 
 if __name__ == "__main__":
-  #  Step 1: Initialize the light client store
-  light_client_store = initialize_light_client_store(trusted_block_root,
-                                                     bootstrap_object 
-  )
-  #  Step 2: Sync from bootstrap period to current period 
+  """ 
+    Step 1: Initialize the light client store
+  """
+  light_client_store = initialize_light_client_store(trusted_block_root, bootstrap_object)
+  print("Step 1 Complete") 
+  print("\n") 
+  """  
+    Step 2: Sync from bootstrap period to current period 
+  """
   current_period = sync_to_current_period(light_client_store)
-
-  current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
-  print(current_slot)
-
-
-
-  #  Step 3: Sync from current period to current block header
-  # current_block_header = sync_to_current_slot(current_period)
-
-  #  ^ Where should I put the while loop?  Right here, or within sync_to_current_slot()?
-  #    First trying it within sync_to_current_slot function 
+  
+  """
+   Step 3: Sync from current period to current block header. Keep up with the most recent attested and finalized headers
+  """
+  sync_to_current_slot()
 
 
 
 
-  # THIS WAS CHAINSAFE'S TYPESCRIPT FUNCTION FOR CURRENT SLOT.  Maybe I can implement something similar?
-  #
-  # export function getCurrentSlot(config: IChainConfig, genesisTime: number): Slot {
-  #   const diffInSeconds = Date.now() / 1000 - genesisTime;
-  #   return Math.floor(diffInSeconds / config.SECONDS_PER_SLOT);
-  # }
+
+
+
+
+
+  # This gets you an updated slot.  The light client needs to ~listen~ for when it is time to ask for an update and respond accordingly  
+  while 1>0:
+    current_time = uint64(int(time.time()))
+    current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+    current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
+    current_period = get_current_sync_period(current_time, MIN_GENESIS_TIME)
+    print("\n")
+    print("current time: " + str(current_time))
+    print("current slot: " + str(current_slot)) 
+    print("current epoch: " + str(current_epoch))                          #  Request a finalized update every time the current epoch increments.  
+    print("current period: " + str(current_period))                        #  Every epoch incremented brings a new latest finalized header 
+    print("\n")
+    
+    # process_slot_for_light_client_store(light_client_store, current_slot) 
+    time.sleep(12)
+
+
+
+
+
+
+
+
+
 
 
 

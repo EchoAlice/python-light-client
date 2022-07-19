@@ -1,4 +1,6 @@
-from containers import (CURRENT_SYNC_COMMITTEE_INDEX,
+from containers import (ALTAIR_FORK_EPOCH,
+                        ALTAIR_FORK_VERSION,
+                        CURRENT_SYNC_COMMITTEE_INDEX,
                         DOMAIN_SYNC_COMMITTEE,
                         EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
                         FINALIZED_ROOT_INDEX,
@@ -11,7 +13,8 @@ from containers import (CURRENT_SYNC_COMMITTEE_INDEX,
                         UPDATE_TIMEOUT,
                         Bytes32,
                         Domain, 
-                        DomainType, 
+                        DomainType,
+                        Epoch, 
                         Root, 
                         Slot,
                         SSZObject, 
@@ -55,6 +58,14 @@ def compute_fork_data_root(current_version: Version, genesis_validators_root: Ro
         current_version=current_version,
         genesis_validators_root=genesis_validators_root,
     ))
+
+def compute_fork_version(epoch: Epoch) -> Version:
+    """
+    Return the fork version at the given ``epoch``.
+    """
+    if epoch >= ALTAIR_FORK_EPOCH:
+        return ALTAIR_FORK_VERSION
+    return GENESIS_FORK_VERSION
 
 def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
     """
@@ -207,13 +218,18 @@ def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,
                                  current_slot: Slot,
                                  genesis_validators_root: Root,
-                                 fork_version: Version                # I added in fork version because idk how to calculate it
                                  ) -> None:
-    # print("\n") 
-    # print("Light client store: " + str(store)) 
-    # print("\n") 
-    # print("Light client update: " + str(update))
-    # print("\n") 
+    print("\n")
+    print("Store's sync period: " + str(compute_sync_committee_period_at_slot(store.finalized_header.slot))) 
+    print("Update's sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot))) 
+    print("store's finalized slot: " + str(store.finalized_header.slot)) 
+    print("update's finalized slot: " + str(update.finalized_header.slot))
+    # current_slot >= update.signature_slot > update.attested_header.slot
+    if compute_sync_committee_period_at_slot(store.finalized_header.slot) == 518:
+        print("update's attested slot: " + str(update.attested_header.slot))
+        print("update's signature slot: " + str(update.signature_slot))
+        print("Current slot: " + str(current_slot))
+
 
     # Verify sync committee has sufficient participants
     sync_aggregate = update.sync_aggregate
@@ -224,23 +240,11 @@ def validate_light_client_update(store: LightClientStore,
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.slot)
     update_signature_period = compute_sync_committee_period_at_slot(update.signature_slot)
 
-    print("Store period: " + str(store_period))
-    print("Update period: " + str(update_signature_period))
-
-    # # TEST LOGIC
-    # assert update_signature_period in (store_period, store_period + 1)
-
-    # THIS IS THE REAL LOGIC
-    # 
     if is_next_sync_committee_known(store):  
     #  "assert the update_signature_period is either == store_period  or update_signature_period == store_period + 1"
         assert update_signature_period in (store_period, store_period + 1)
     else:
-        assert update_signature_period == store_period                        #    Is this saying that when bootstrapping to a period I need to 
-                                                                              #    have an attested header within the bootstrap period?
-    #                                                                               
-    #                                                                               Aka I need to ask for update from period 511 if that's the period
-    #                                                                               i'm bootstrapping from.                                                   
+        assert update_signature_period == store_period                         
 
     # Verify update is relevant
     update_attested_period = compute_sync_committee_period_at_slot(update.attested_header.slot)
@@ -270,8 +274,8 @@ def validate_light_client_update(store: LightClientStore,
             index=FINALIZED_ROOT_INDEX,                       # index=get_subtree_index(FINALIZED_ROOT_INDEX),        <--- Ethereum's version of this parameter         
             root=update.attested_header.state_root,
         )
-    print("\n")
-    print("Update's finalized header is the finalized root within update's attested header state")
+    # print("\n")
+    # print("Update's finalized header is the finalized root within update's attested header state")
 
     # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
     # state of the `attested_header`
@@ -286,13 +290,13 @@ def validate_light_client_update(store: LightClientStore,
             branch=update.next_sync_committee_branch,
             # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
             index=NEXT_SYNC_COMMITTEE_INDEX,
-            root=update.finalized_header.state_root,                    # spec said "attested_header.state_root"          Must be a bug in the branch            
+            root=update.finalized_header.state_root,                    # spec said "attested_header.state_root"          Must be a bug in the branch, right?            
         )
 
-    print("\n")
-    print("Update's next sync committee is the next sync committee within update's finalized header.")
-    print("This needs to be the next sync committee within update's attested header!")
-    print("\n")
+    # print("\n")
+    # print("Update's next sync committee is the next sync committee within update's finalized header.")
+    # print("This needs to be the next sync committee within update's attested header!")
+    # print("\n")
 
 
     # My branch works for verifying the next sync committee against the finalized header, but not against
@@ -303,7 +307,7 @@ def validate_light_client_update(store: LightClientStore,
     # on is_finality_update. Instead, waiting until finalized_header is
     # in the attested_header's sync committee period is now necessary."  - Etan-Status PR #2932  
     #  
-    print('Both proofs work')
+    # print('Both proofs work')
     
     # Verify sync committee aggregate signature
     if update_signature_period == store_period:
@@ -315,11 +319,13 @@ def validate_light_client_update(store: LightClientStore,
         if bit
     ]
 
-    # fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
+    fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
     signing_root = compute_signing_root(update.attested_header, domain)
-    assert G2ProofOfPossession.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       # spec uses bls.FastAggregateVerify()
-    # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       # spec uses bls.FastAggregateVerify()
+
+    #               Muting assertion for now 
+    # assert G2ProofOfPossession.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       # spec uses bls.FastAggregateVerify()
+    # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)                     # spec uses bls.FastAggregateVerify()
     print("Validation successful")
 
 
@@ -340,9 +346,8 @@ def apply_light_client_update(store: LightClientStore, update: LightClientUpdate
 def process_light_client_update(store: LightClientStore,
                                 update: LightClientUpdate,
                                 current_slot: Slot,
-                                genesis_validators_root: Root,
-                                fork_version: Version) -> None:
-    validate_light_client_update(store, update, current_slot, genesis_validators_root, fork_version)
+                                genesis_validators_root: Root,) -> None:
+    validate_light_client_update(store, update, current_slot, genesis_validators_root)
 
     sync_committee_bits = update.sync_aggregate.sync_committee_bits
 
