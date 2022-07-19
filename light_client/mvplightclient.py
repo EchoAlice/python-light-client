@@ -2,14 +2,18 @@ from bootstrapapi import (bootstrap_object,
                           bootstrap_block_header,
                           bootstrap_sync_committee,
                           trusted_block_root)
-from containers import (Root,
+from containers import (genesis_validators_root,
+                        Root,
                         EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
                         MIN_GENESIS_TIME, 
                         SECONDS_PER_SLOT,
                         SLOTS_PER_EPOCH,
                         uint64,
                         BeaconBlockHeader)
-from updatesapi import instantiates_sync_period_data, updates_for_period
+from updatesapi import (calls_api, 
+                        initializes_block_header, 
+                        instantiates_sync_period_data, 
+                        updates_for_period)
 from specfunctions import (compute_sync_committee_period_at_slot, 
                            initialize_light_client_store,
                            process_light_client_update, 
@@ -18,10 +22,6 @@ import time
 import json
 import requests
 
-def calls_api(url):
-  response = requests.get(url)
-  json_object = response.json() 
-  return json_object
 
 def parse_hex_to_bit(hex_string):
   int_representation = int(hex_string, 16)
@@ -53,8 +53,8 @@ def get_current_epoch(current_time, genesis_time):
   return current_epoch
 
 def get_current_sync_period(current_time, genesis_time):
-  current_epoch = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
-  return current_epoch
+  current_sync_period = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+  return current_sync_period
 
 # Incorperate syncing to period inside of this function as well
 # def syncs_to_current_period(bootstrap_period) -> int:
@@ -62,20 +62,19 @@ def get_current_sync_period(current_time, genesis_time):
 def sync_to_current_period(light_client_store) -> int:
   sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot) 
   while 1>0:
-    response = updates_for_period(sync_period)
-    updates = response.json()
-    updates_status_code = response.status_code
-  
+    updates = updates_for_period(sync_period)
+    updates_status_code = updates.status_code
+
     # Checks if api call executed properly 
     if updates_status_code == 500:
       sync_period = sync_period - 1 
-      return sync_period
+      print("Sync period: " + str(sync_period)) 
+      return light_client_update
     else:
       light_client_update = instantiates_sync_period_data(sync_period)
 
       current_time = uint64(int(time.time()))
       current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
-      genesis_validators_root = Root()
 
       #  THIS FUNCTION IS THE ANTITHESIS OF WHAT UPDATESAPI.PY IS CONVERGING TOWARDS!
       process_light_client_update(light_client_store, 
@@ -83,34 +82,49 @@ def sync_to_current_period(light_client_store) -> int:
                                   current_slot,
                                   genesis_validators_root
       )                   
-
-      # When process_light_client_update() is running smoothly, this state transition has already occured.  (Within apply_light_client_update())
-      # 
-      # For testing purposes:
-      # light_client_store.finalized_header = light_client_update.finalized_header
       
-      # Increment the sync period until we reach the current period.  
       # Time doesn't matter when getting to the current period. Matters only once we get there
       time.sleep(1)
+      # Increment the sync period until we reach the current period.  
       sync_period += 1
 
-# Maybe I should just sync to the current finalized header... The attested header updates aren't super reliable with Lodestar
+# This function is where the light client receives update objects of type LightClientUpdate
 
-def sync_to_current_slot() -> BeaconBlockHeader:
+# Maybe I should just sync to the current finalized header... The attested header updates aren't super reliable with Lodestar
+# Can I access the light_client_store and light_client_update objects outside of this function?  I'd have to break out of it first
+def sync_to_current_finalized_header(light_client_store ,light_client_update):          
+  previous_slot = 0
+  previous_epoch = 0
+  previous_period = 0 
   while 1>0:
-    # Make api call.  See if the call updates every cycle    
     current_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/finality_update/" 
     current_update = calls_api(current_update_url).json()
-    print(current_update) 
-    # Get to current finalized header.  Continuously call the update from here on out 
-    # Make update beacon_block_header calls to "/eth/v1/light_client/finality_update/" 
+
+    current_time = uint64(int(time.time()))
+    current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+    current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
+    current_period = get_current_sync_period(current_time, MIN_GENESIS_TIME)
     
-    # current_attested_header = current_update['data']['attested_header']
+    # Get to current finalized header.  Continuously call the update from here on out 
+    # I need to get ALL information passed from the current_update into update containers!
+    
+    if current_epoch - previous_epoch == 1:
+      # print("My current epoch has updated")
+      current_finalized_header_message = current_update['data']['finalized_header'] 
+      current_finalized_header = initializes_block_header(current_finalized_header_message)
+      
+      # process_slot_for_light_client_store()                                     # This function call might only be necessary if calling an update every slot 
+      process_light_client_update(light_client_store, 
+                                  light_client_update, 
+                                  current_slot,
+                                  genesis_validators_root
+      )                   
 
-    time.sleep(12)
+    # Would getting rid of this sleep timer break my computer??
+    previous_epoch = current_epoch 
+    time.sleep(1)
 
-  current_block_header = "dummy" 
-  return current_block_header
+  return
 
 
 if __name__ == "__main__":
@@ -118,17 +132,17 @@ if __name__ == "__main__":
     Step 1: Initialize the light client store
   """
   light_client_store = initialize_light_client_store(trusted_block_root, bootstrap_object)
-  print("Step 1 Complete") 
-  print("\n") 
+  
   """  
     Step 2: Sync from bootstrap period to current period 
   """
-  current_period = sync_to_current_period(light_client_store)
-  
+  light_client_update = sync_to_current_period(light_client_store)
+
   """
-   Step 3: Sync from current period to current block header. Keep up with the most recent attested and finalized headers
+   Step 3: Sync from current period to current block header. 
+   Keep up with the most recent finalized header (Maybe each slot if Lodestar's API is fire.  Ask Cayman)
   """
-  sync_to_current_slot()
+  sync_to_current_finalized_header(light_client_store, light_client_update)
 
 
 
@@ -138,21 +152,82 @@ if __name__ == "__main__":
 
 
 
-  # This gets you an updated slot.  The light client needs to ~listen~ for when it is time to ask for an update and respond accordingly  
-  while 1>0:
-    current_time = uint64(int(time.time()))
-    current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
-    current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
-    current_period = get_current_sync_period(current_time, MIN_GENESIS_TIME)
-    print("\n")
-    print("current time: " + str(current_time))
-    print("current slot: " + str(current_slot)) 
-    print("current epoch: " + str(current_epoch))                          #  Request a finalized update every time the current epoch increments.  
-    print("current period: " + str(current_period))                        #  Every epoch incremented brings a new latest finalized header 
-    print("\n")
+
+
+
+
+
+
+
+
+
+#               ==============================================================================
+#               CHANGE CONDITIONAL STATEMENT TO THIS IF YOU WANT TO SYNC TO THE CURRENT BLOCK!
+#               ==============================================================================
+# 
+#
+#
+# # Maybe I should just sync to the current finalized header... The attested header updates aren't super reliable with Lodestar
+# def sync_to_current_finalized_header(light_client_store ,light_client_update) -> BeaconBlockHeader:
+#   previous_slot = 0
+#   previous_epoch = 0
+#   previous_period = 0 
+#   while 1>0:
+#     current_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/finality_update/" 
+#     current_update = calls_api(current_update_url).json()
+
+#     current_time = uint64(int(time.time()))
+#     current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
+#     current_period = get_current_sync_period(current_time, MIN_GENESIS_TIME)
     
-    # process_slot_for_light_client_store(light_client_store, current_slot) 
-    time.sleep(12)
+#     #  Change conditional statement to this if you want to sync to the current block!
+#     # 
+#     # current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+#     # if current_slot - previous_slot == 1 :                 
+#       # current_attested_header_message = current_update['data']['attested_header'] 
+#       # current_attested_header = initializes_block_header(current_attested_header_message)
+#       # print("My current slot has updated")
+#       # print("Lodestar's attested header slot: " + str(current_attested_header.slot))
+#     # previous_slot = current_slot 
+
+
+#     # Get to current finalized header.  Continuously call the update from here on out 
+#     # I need to get ALL information passed from the current_update into update containers!
+#     if current_epoch - previous_epoch == 1:
+#       print("My current epoch has updated")
+#       current_finalized_header_message = current_update['data']['finalized_header'] 
+#       current_finalized_header = initializes_block_header(current_finalized_header_message)
+#       # process_slot_for_light_client_store() 
+#       # process_light_client_update() 
+  
+#     # Would getting rid of this sleep timer break my computer??
+#     previous_epoch = current_epoch 
+#     time.sleep(1)
+
+
+
+
+
+
+
+
+  # # This gets you an updated slot.  The light client needs to ~listen~ for when it is time to ask for an update and respond accordingly  
+  # while 1>0:
+  #   current_time = uint64(int(time.time()))
+  #   current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+  #   current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
+  #   current_period = get_current_sync_period(current_time, MIN_GENESIS_TIME)
+  #   print("\n")
+  #   # print("current time: " + str(current_time))
+  #   print("current slot: " + str(current_slot)) 
+  #   # print("current epoch: " + str(current_epoch))                          #  Request a finalized update every time the current epoch increments.  
+  #   # print("current period: " + str(current_period))                        #  Every epoch incremented brings a new latest finalized header 
+    
+  #   print("Current slot % seconds per slot = " + str(current_slot % SECONDS_PER_SLOT)) 
+    
+    
+  #   # process_slot_for_light_client_store(light_client_store, current_slot) 
+  #   time.sleep(1)
 
 
 
