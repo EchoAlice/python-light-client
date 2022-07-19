@@ -26,9 +26,11 @@ def parse_list(list):
 
 def updates_for_period(sync_period):
   sync_period = str(sync_period) 
-  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/sync_period_update?start_period="+sync_period+"&count=1" 
+  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period="+sync_period+"&count=1" 
   response = calls_api(updates_url)
+
   return response
+
 
 def initializes_block_header(header_message):
   block_header = BeaconBlockHeader (
@@ -76,11 +78,8 @@ def initializes_sync_aggregate(aggregate_message):
 
 def instantiates_sync_period_data(sync_period):
   sync_period_update = updates_for_period(sync_period).json()
-  print(sync_period_update)
   
   attested_header_message = sync_period_update['data'][0]['attested_header']
-  # Problem here! 
-  print(attested_header_message) 
   attested_block_header = initializes_block_header(attested_header_message) 
 
   next_sync_committee_message = sync_period_update['data'][0]['next_sync_committee']
