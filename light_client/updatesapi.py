@@ -1,7 +1,6 @@
 import json
 import requests
-from containers import Root, UPDATE_TIMEOUT, BeaconBlockHeader, LightClientStore, LightClientUpdate,SyncAggregate, SyncCommittee
-from specfunctions import compute_sync_committee_period_at_slot, process_light_client_update
+from containers import BeaconBlockHeader, LightClientUpdate,SyncAggregate, SyncCommittee
 
 def calls_api(url):
   response = requests.get(url)
@@ -75,6 +74,19 @@ def initializes_sync_aggregate(aggregate_message):
 #                                                 / ============== \
 #                                                /~~~~~~~~~~~~~~~~~~\
 
+#
+#  The api bodies from "/light_client/updates?____" and "light_client/finality_update" 
+#  are slightly different from one another.  This means I have to create a seperate function
+#  to initialize finality_update data    :P 
+#
+#         "/light_client/updates?____"                                            "/light_client/finality_update"
+#
+#  update_message['data'][0]['attested_header']                               update_message['data']['attested_header']
+#
+#
+# (The [0] is used to refer to which sync period you want)
+# Maybe change up the sync to current period to utilize this index
+
 
 def instantiates_sync_period_data(sync_period):
   sync_period_update = updates_for_period(sync_period).json()
@@ -114,5 +126,38 @@ def instantiates_sync_period_data(sync_period):
 
   return light_client_update
 
-# This function should be broken up into individual functions and called when appropriate inside of mvplightclient.py
-# def instantiates_current_update_data(current_slot):
+
+
+
+def instantiates_finality_update_data(update_message):
+  attested_header_message = update_message['data']['attested_header']
+  attested_block_header = initializes_block_header(attested_header_message) 
+
+  next_sync_committee_message = update_message['data']['next_sync_committee']
+  next_sync_committee = initializes_sync_committee(next_sync_committee_message)
+  next_sync_committee_branch = update_message['data']['next_sync_committee_branch']
+  parse_list(next_sync_committee_branch)
+
+  finalized_header_message =  update_message['data']['finalized_header']
+  finalized_block_header = initializes_block_header(finalized_header_message) 
+  finality_branch = update_message['data']['finality_branch']
+  parse_list(finality_branch) 
+
+  sync_aggregate_message = update_message['data']['sync_aggregate']
+  sync_aggregate = initializes_sync_aggregate(sync_aggregate_message)
+
+  fork_version =  update_message['data']['fork_version']
+  fork_version = parse_hex_to_byte(fork_version)
+
+
+  light_client_finality_update = LightClientUpdate(
+    attested_header = attested_block_header,
+    next_sync_committee = next_sync_committee,
+    next_sync_committee_branch = next_sync_committee_branch,
+    finalized_header = finalized_block_header,
+    finality_branch = finality_branch,
+    sync_aggregate = sync_aggregate,
+    signature_slot =  attested_block_header.slot + 1     
+  )
+
+  return light_client_finality_update
