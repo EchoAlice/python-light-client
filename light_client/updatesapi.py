@@ -1,6 +1,7 @@
 import json
 import requests
-from containers import BeaconBlockHeader, LightClientUpdate,SyncAggregate, SyncCommittee
+from containers import Bytes32, NEXT_SYNC_COMMITTEE_INDEX, BeaconBlockHeader, LightClientUpdate,SyncAggregate, SyncCommittee
+from specfunctions import floorlog2
 
 def calls_api(url):
   response = requests.get(url)
@@ -127,16 +128,9 @@ def instantiates_sync_period_data(sync_period):
   return light_client_update
 
 
-
-
 def instantiates_finality_update_data(update_message):
   attested_header_message = update_message['data']['attested_header']
   attested_block_header = initializes_block_header(attested_header_message) 
-
-  next_sync_committee_message = update_message['data']['next_sync_committee']
-  next_sync_committee = initializes_sync_committee(next_sync_committee_message)
-  next_sync_committee_branch = update_message['data']['next_sync_committee_branch']
-  parse_list(next_sync_committee_branch)
 
   finalized_header_message =  update_message['data']['finalized_header']
   finalized_block_header = initializes_block_header(finalized_header_message) 
@@ -146,14 +140,11 @@ def instantiates_finality_update_data(update_message):
   sync_aggregate_message = update_message['data']['sync_aggregate']
   sync_aggregate = initializes_sync_aggregate(sync_aggregate_message)
 
-  fork_version =  update_message['data']['fork_version']
-  fork_version = parse_hex_to_byte(fork_version)
 
-
-  light_client_finality_update = LightClientUpdate(
+  light_client_finality_update = LightClientUpdate (
     attested_header = attested_block_header,
-    next_sync_committee = next_sync_committee,
-    next_sync_committee_branch = next_sync_committee_branch,
+    next_sync_committee = SyncCommittee(),                
+    next_sync_committee_branch = [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))],     # is there a better way to write "empty branch"? Less specific like, "null"
     finalized_header = finalized_block_header,
     finality_branch = finality_branch,
     sync_aggregate = sync_aggregate,
