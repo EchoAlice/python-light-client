@@ -1,7 +1,15 @@
 import json
 import requests
-from containers import Bytes32, NEXT_SYNC_COMMITTEE_INDEX, BeaconBlockHeader, LightClientUpdate,SyncAggregate, SyncCommittee
 from specfunctions import floorlog2
+from containers import (Bytes32, 
+                        Slot, 
+                        NEXT_SYNC_COMMITTEE_INDEX, 
+                        BeaconBlockHeader, 
+                        LightClientFinalityUpdate,
+                        LightClientOptimisticUpdate, 
+                        LightClientUpdate, 
+                        SyncAggregate, 
+                        SyncCommittee)
 
 def calls_api(url):
   response = requests.get(url)
@@ -69,48 +77,30 @@ def initializes_sync_aggregate(aggregate_message):
   return sync_aggregate
 
 
+
 #                                                \~~~~~~~~~~~~~~~~~~/
 #                                                 \ ============== /
 #                                                    THE BIG BOYS
 #                                                 / ============== \
 #                                                /~~~~~~~~~~~~~~~~~~\
 
-#
-#  The api bodies from "/light_client/updates?____" and "light_client/finality_update" 
-#  are slightly different from one another.  This means I have to create a seperate function
-#  to initialize finality_update data    :P 
-#
-#         "/light_client/updates?____"                                            "/light_client/finality_update"
-#
-#  update_message['data'][0]['attested_header']                               update_message['data']['attested_header']
-#
-#
-# (The [0] is used to refer to which sync period you want)
-# Maybe change up the sync to current period to utilize this index
-
 
 def instantiates_sync_period_data(sync_period):
   sync_period_update = updates_for_period(sync_period).json()
-  
-  attested_header_message = sync_period_update['data'][0]['attested_header']
-  attested_block_header = initializes_block_header(attested_header_message) 
 
-  next_sync_committee_message = sync_period_update['data'][0]['next_sync_committee']
-  next_sync_committee = initializes_sync_committee(next_sync_committee_message)
+  attested_block_header = initializes_block_header(sync_period_update['data'][0]['attested_header']) 
+  next_sync_committee = initializes_sync_committee(sync_period_update['data'][0]['next_sync_committee'])
+  finalized_block_header = initializes_block_header(sync_period_update['data'][0]['finalized_header']) 
+  sync_aggregate = initializes_sync_aggregate(sync_period_update['data'][0]['sync_aggregate'])
+ 
   next_sync_committee_branch = sync_period_update['data'][0]['next_sync_committee_branch']
   parse_list(next_sync_committee_branch)
-
-  finalized_header_message =  sync_period_update['data'][0]['finalized_header']
-  finalized_block_header = initializes_block_header(finalized_header_message) 
+  
   finality_branch = sync_period_update['data'][0]['finality_branch']
   parse_list(finality_branch) 
 
-  sync_aggregate_message = sync_period_update['data'][0]['sync_aggregate']
-  sync_aggregate = initializes_sync_aggregate(sync_aggregate_message)
-
   fork_version =  sync_period_update['data'][0]['fork_version']
   fork_version = parse_hex_to_byte(fork_version)
-
 
   light_client_update = LightClientUpdate(
     attested_header = attested_block_header,
@@ -124,31 +114,34 @@ def instantiates_sync_period_data(sync_period):
     sync_aggregate = sync_aggregate,
     signature_slot =  attested_block_header.slot + 1                  # Slot at which the aggregate signature was created (untrusted)    
   )
-
   return light_client_update
 
 
 def instantiates_finality_update_data(update_message):
-  attested_header_message = update_message['data']['attested_header']
-  attested_block_header = initializes_block_header(attested_header_message) 
-
-  finalized_header_message =  update_message['data']['finalized_header']
-  finalized_block_header = initializes_block_header(finalized_header_message) 
+  attested_block_header = initializes_block_header(update_message['data']['attested_header']) 
+  finalized_block_header = initializes_block_header(update_message['data']['finalized_header']) 
+  sync_aggregate = initializes_sync_aggregate(update_message['data']['sync_aggregate'])
+  
   finality_branch = update_message['data']['finality_branch']
   parse_list(finality_branch) 
 
-  sync_aggregate_message = update_message['data']['sync_aggregate']
-  sync_aggregate = initializes_sync_aggregate(sync_aggregate_message)
-
-
-  light_client_finality_update = LightClientUpdate (
+  light_client_finality_update = LightClientFinalityUpdate (
     attested_header = attested_block_header,
-    next_sync_committee = SyncCommittee(),                
-    next_sync_committee_branch = [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))],     # is there a better way to write "empty branch"? Less specific like, "null"
     finalized_header = finalized_block_header,
     finality_branch = finality_branch,
     sync_aggregate = sync_aggregate,
     signature_slot =  attested_block_header.slot + 1     
   )
-
   return light_client_finality_update
+
+
+def instantiates_optimistic_update_data(update_message):
+  attested_block_header = initializes_block_header(update_message['data']['attested_header']) 
+  attested_sync_aggregate = initializes_sync_aggregate(update_message['data']['sync_aggregate'])
+
+  light_client_optimistic_update = LightClientOptimisticUpdate (
+    attested_header = attested_block_header, 
+    sync_aggregate = attested_sync_aggregate, 
+    signature_slot = attested_block_header.slot + 1 
+  )
+  return light_client_optimistic_update

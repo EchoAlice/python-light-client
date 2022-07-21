@@ -23,6 +23,8 @@ from containers import (ALTAIR_FORK_EPOCH,
                         BeaconBlockHeader,
                         ForkData,
                         LightClientBootstrap,
+                        LightClientFinalityUpdate,
+                        LightClientOptimisticUpdate,
                         LightClientStore, 
                         LightClientUpdate, 
                         SigningData, 
@@ -32,7 +34,6 @@ from py_ecc.bls import G2ProofOfPossession
 from remerkleable.core import View
 
 
-genesis_validators_root = Root()                                         #  Is this correct?
 
 def compute_epoch_at_slot(slot_number):
   epoch = slot_number // SLOTS_PER_EPOCH 
@@ -159,9 +160,12 @@ def get_safety_threshold(store: LightClientStore) -> uint64:
     ) // 2
 
 
+
 #                                           \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
 #                                            \ =========================== /
+#
 #                                              Light Client Initialization
+#
 #                                            / =========================== \
 #                                           /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 
@@ -188,9 +192,12 @@ def initialize_light_client_store(trusted_block_root: Root,
     )
 
 
+
 #                                           \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
 #                                            \ ========================== /
+#
 #                                              Light Client State Updates
+#
 #                                            / ========================== \
 #                                           /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 
@@ -199,7 +206,7 @@ def process_slot_for_light_client_store(store: LightClientStore, current_slot: S
     if current_slot % UPDATE_TIMEOUT == 0:
         store.previous_max_active_participants = store.current_max_active_participants
         store.current_max_active_participants = 0
-    #  if the current slot is past the next finalized header AND the store has a best valid update
+    #  if the current slot is past the store's sync period AND the store has a best valid update
     if (
         current_slot > store.finalized_header.slot + UPDATE_TIMEOUT                               
         and store.best_valid_update is not None
@@ -219,17 +226,6 @@ def validate_light_client_update(store: LightClientStore,
                                  current_slot: Slot,
                                  genesis_validators_root: Root,
                                  ) -> None:
-    print("\n")
-    print("Store's sync period: " + str(compute_sync_committee_period_at_slot(store.finalized_header.slot))) 
-    print("Update's sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot))) 
-    print("store's finalized slot: " + str(store.finalized_header.slot)) 
-    print("update's finalized slot: " + str(update.finalized_header.slot))
-    # current_slot >= update.signature_slot > update.attested_header.slot
-    if compute_sync_committee_period_at_slot(store.finalized_header.slot) == 518:
-        print("update's attested slot: " + str(update.attested_header.slot))
-        print("update's signature slot: " + str(update.signature_slot))
-        print("Current slot: " + str(current_slot))
-
 
     # Verify sync committee has sufficient participants
     sync_aggregate = update.sync_aggregate
@@ -248,11 +244,11 @@ def validate_light_client_update(store: LightClientStore,
 
     # Verify update is relevant
     update_attested_period = compute_sync_committee_period_at_slot(update.attested_header.slot)
-    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (
-        is_sync_committee_update(update) and update_attested_period == store_period
-    )
+    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (                #   <---- If the previous update wasn't a sync committee update, update.next_sync_committee == SyncCommittee()  
+        is_sync_committee_update(update) and update_attested_period == store_period               #         and store.next_sync_committee == update.next_sync_committee.  Sooo the store's next sync committee got 
+    )                                                                                             #         wiped and now we're here.
     assert (
-        update.attested_header.slot > store.finalized_header.slot
+        update.attested_header.slot > store.finalized_header.slot                                 
         or update_has_next_sync_committee
     )
 
@@ -271,7 +267,7 @@ def validate_light_client_update(store: LightClientStore,
             leaf=finalized_root,
             branch=update.finality_branch,
             # depth=floorlog2(FINALIZED_ROOT_INDEX),
-            index=FINALIZED_ROOT_INDEX,                       # index=get_subtree_index(FINALIZED_ROOT_INDEX),        <--- Ethereum's version of this parameter         
+            index=FINALIZED_ROOT_INDEX,                                
             root=update.attested_header.state_root,
         )
     # print("\n")
@@ -279,6 +275,7 @@ def validate_light_client_update(store: LightClientStore,
 
     # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
     # state of the `attested_header`
+    #  This next sync committee validity proof should only be happening if I'm calling a sync committee update!!!
     if not is_sync_committee_update(update):
         assert update.next_sync_committee == SyncCommittee()
     else:
@@ -287,7 +284,7 @@ def validate_light_client_update(store: LightClientStore,
         #  Next sync committee corresponding to 'attested header' 
         assert is_valid_merkle_branch(
             leaf=View.hash_tree_root(update.next_sync_committee),
-            branch=update.next_sync_committee_branch,
+            branch=update.next_sync_committee_branch,                   # Is this the right branch?
             # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
             index=NEXT_SYNC_COMMITTEE_INDEX,
             root=update.finalized_header.state_root,                    # spec said "attested_header.state_root"          Must be a bug in the branch, right?            
@@ -302,7 +299,11 @@ def validate_light_client_update(store: LightClientStore,
     # My branch works for verifying the next sync committee against the finalized header, but not against
     # the attested header.  They should have the same next sync committee though because they're in the
     # same sync period.
-    # 
+    #
+    #       The bug still occurs when starting from period 511 + N       N >= 1
+    #
+    #                   Maybe there's a bug in sync_to_current_period()?  
+    #  
     # "The next_sync_committee can no longer be considered finalized based
     # on is_finality_update. Instead, waiting until finalized_header is
     # in the attested_header's sync committee period is now necessary."  - Etan-Status PR #2932  
@@ -319,14 +320,23 @@ def validate_light_client_update(store: LightClientStore,
         if bit
     ]
 
-    fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            # What if I just use the fork version given to me in the update api?
-    domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)
+    fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            
+    domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
     signing_root = compute_signing_root(update.attested_header, domain)
 
-    #               Muting assertion for now 
+    #   Muting assertion for now.  Do ya think the assertion might not work
+    #   because of something that's wrong in the update.next_sync_committee assertion?
+    #   What if I just use the fork version given to me in the update api?
+    # 
+    #   There are a lot of constants/different pieces of data going into this thing... For instance,
+    #   signing_root takes in update's attested_header and domain!  
+    #   Is my update.attested_header wrong???  
+    #   That might explain why my proof doesn't match my attested_header.state_root! <-----Noooo because 
+    #                                                            the update.attested_header.state works in the proof right before it   
+    
     # assert G2ProofOfPossession.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       # spec uses bls.FastAggregateVerify()
     # assert bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)                     # spec uses bls.FastAggregateVerify()
-    print("Validation successful")
+    # print("Validation successful")
 
 
 def apply_light_client_update(store: LightClientStore, update: LightClientUpdate) -> None:
@@ -371,7 +381,16 @@ def process_light_client_update(store: LightClientStore,
     ):
         store.optimistic_header = update.attested_header
 
-    # Update finalized header
+    # Update finalized header          <--- Spec's comment
+    #
+    # store's sync committee isn't known, there's a sync committee update, 
+    # there's a finality update, and the sync period for update's finalized header is 
+    # equivalent to the sync period for updates attested header.
+    #
+    # "'and' returns true if both statements are true"
+    # In this case, the variable will be true if all conditions are met
+    #
+    #  Does the light client update get wiped out after it's processed?
     update_has_finalized_next_sync_committee = (
         not is_next_sync_committee_known(store)
         and is_sync_committee_update(update) and is_finality_update(update) and (
@@ -380,7 +399,7 @@ def process_light_client_update(store: LightClientStore,
         )
     )
     if (
-        sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2
+        sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2 
         and (
             update.finalized_header.slot > store.finalized_header.slot
             or update_has_finalized_next_sync_committee
@@ -390,11 +409,70 @@ def process_light_client_update(store: LightClientStore,
         apply_light_client_update(store, update)
         store.best_valid_update = None
 
+def process_light_client_finality_update(store: LightClientStore,
+                                         finality_update: LightClientFinalityUpdate,
+                                         current_slot: Slot,
+                                         genesis_validators_root: Root) -> None:
+    update = LightClientUpdate(
+        attested_header=finality_update.attested_header,
+        next_sync_committee=SyncCommittee(),
+        next_sync_committee_branch=[Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))],
+        finalized_header=finality_update.finalized_header,
+        finality_branch=finality_update.finality_branch,
+        sync_aggregate=finality_update.sync_aggregate,
+        signature_slot=finality_update.signature_slot,
+    )
+    process_light_client_update(store, update, current_slot, genesis_validators_root)
 
-
-
-# #  IMPORTANT TEST VALUES!
+def process_light_client_optimistic_update(store: LightClientStore,
+                                           optimistic_update: LightClientOptimisticUpdate,
+                                           current_slot: Slot,
+                                           genesis_validators_root: Root) -> None:
+    update = LightClientUpdate(
+        attested_header=optimistic_update.attested_header,
+        next_sync_committee=SyncCommittee(),
+        next_sync_committee_branch=[Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))],
+        finalized_header=BeaconBlockHeader(),
+        finality_branch=[Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))],
+        sync_aggregate=optimistic_update.sync_aggregate,
+        signature_slot=optimistic_update.signature_slot,
+    )
+    print('\n') 
+    print("Pre process")
+    print("  update's attested header slot: " + str(update.attested_header.slot)) 
     
+    process_light_client_update(store, update, current_slot, genesis_validators_root)
+    print('\n') 
+    print("Post process")
+    print("  update's attested header slot: " + str(update.attested_header.slot)) 
+   
+
+# =============================
+#  IMPORTANT TEST VALUES BELOW!
+# =============================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #     print("Store's finalized_header: ")
 #     print("Slot: " + str(store.finalized_header.slot))
 #     print("Sync period: " + str(compute_sync_committee_period_at_slot(store.finalized_header.slot)))
