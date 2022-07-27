@@ -28,19 +28,12 @@ def is_valid_merkle_branch(leaf, branch, index, root):
     if path[i] == '1':
       hashed_node = hash_pair(branch_value, node_to_hash)
     if(i == 1):                                
-      # print("hashed node: ") 
-      # print(hashed_node)
-      # print("root: ") 
-      # print(bytes(root)) 
       if hashed_node == root: 
         return True
       else: 
         return False
     node_to_hash = hashed_node
     branch_index += 1
-
-
-
 
 
 

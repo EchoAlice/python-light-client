@@ -1,6 +1,5 @@
 import json
 import requests
-from specfunctions import compute_sync_committee_period_at_slot
 from containers import BeaconBlockHeader, LightClientBootstrap, SyncCommittee
 
 def calls_api(url):
@@ -61,24 +60,3 @@ bootstrap_object = LightClientBootstrap(
   current_sync_committee= bootstrap_sync_committee,
   current_sync_committee_branch= bootstrap_sync_committee_branch
 )
-
-
-""" 
-Introduces a new `LightClientBootstrap` structure to allow setting up a
-`LightClientStore` with the initial sync committee and block header from
-a user-configured trusted block root.
-
-This leads to new cases where the `LightClientStore` is only aware of
-the current but not the next sync committee. As a side effect of these
-new cases, the store's `finalized_header` may now  advance into the next
-sync committee period before a corresponding `LightClientUpdate` with
-the new sync committee is obtained, improving responsiveness.
-
-Note that so far, `LightClientUpdate.attested_header.slot` needed to be
-newer than `LightClientStore.finalized_header.slot`. However, it is now
-necessary to also consider certain older updates to try and backfill the
-`next_sync_committee`. The `is_better_update` helper is also updated to
-improve `best_valid_update` tracking.
-
-          - Etan Status:    commit 654970c6057011e407299a61610c697662c335bd
-"""

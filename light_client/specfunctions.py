@@ -221,11 +221,17 @@ def process_slot_for_light_client_store(store: LightClientStore, current_slot: S
         store.best_valid_update = None
 
 
+#  Look at the currentquestions.py file
+#
+#  MAP THE LINKS OF THE ROOTS WE USE IN MERKLE PROOFS BACK TO THE TRUSTED CHECKPOINT ROOT!  Create a diagram
 def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,
                                  current_slot: Slot,
                                  genesis_validators_root: Root,
                                  ) -> None:
+    print("\n") 
+    print("Store's sync period: " + str(compute_sync_committee_period_at_slot(store.finalized_header.slot)))
+    print("Update's sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot)))
 
     # Verify sync committee has sufficient participants
     sync_aggregate = update.sync_aggregate
@@ -244,9 +250,9 @@ def validate_light_client_update(store: LightClientStore,
 
     # Verify update is relevant
     update_attested_period = compute_sync_committee_period_at_slot(update.attested_header.slot)
-    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (                #   <---- If the previous update wasn't a sync committee update, update.next_sync_committee == SyncCommittee()  
-        is_sync_committee_update(update) and update_attested_period == store_period               #         and store.next_sync_committee == update.next_sync_committee.  Sooo the store's next sync committee got 
-    )                                                                                             #         wiped and now we're here.
+    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (                #   <----  I believe this takes care of the bootstrap period messiness 
+        is_sync_committee_update(update) and update_attested_period == store_period                
+    )                                                                                                      
     assert (
         update.attested_header.slot > store.finalized_header.slot                                 
         or update_has_next_sync_committee
@@ -270,46 +276,51 @@ def validate_light_client_update(store: LightClientStore,
             index=FINALIZED_ROOT_INDEX,                                
             root=update.attested_header.state_root,
         )
-    # print("\n")
-    # print("Update's finalized header is the finalized root within update's attested header state")
+    #        ^^^ THIS ASSERTION PASSES!
+
+    # ========================================================================================== 
+    #  I need to create some sort of test, otherwise I can only test this function once a day...
+    #                Look at Etan's test files.  Look at Clara's test files 
+    # ========================================================================================== 
+    #
 
     # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
     # state of the `attested_header`
-    #  This next sync committee validity proof should only be happening if I'm calling a sync committee update!!!
-    if not is_sync_committee_update(update):
+    if not is_sync_committee_update(update):      
         assert update.next_sync_committee == SyncCommittee()
     else:
         if update_attested_period == store_period and is_next_sync_committee_known(store):
             assert update.next_sync_committee == store.next_sync_committee     
-        #  Next sync committee corresponding to 'attested header' 
-        assert is_valid_merkle_branch(
-            leaf=View.hash_tree_root(update.next_sync_committee),
-            branch=update.next_sync_committee_branch,                   # Is this the right branch?
-            # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
-            index=NEXT_SYNC_COMMITTEE_INDEX,
-            root=update.finalized_header.state_root,                    # spec said "attested_header.state_root"          Must be a bug in the branch, right?            
-        )
-
-    # print("\n")
-    # print("Update's next sync committee is the next sync committee within update's finalized header.")
-    # print("This needs to be the next sync committee within update's attested header!")
-    # print("\n")
-
-
-    # My branch works for verifying the next sync committee against the finalized header, but not against
-    # the attested header.  They should have the same next sync committee though because they're in the
-    # same sync period.
-    #
-    #       The bug still occurs when starting from period 511 + N       N >= 1
-    #
-    #                   Maybe there's a bug in sync_to_current_period()?  
-    #  
+        
+        # See if this works... 
+        if update.finalized_header.slot == 0: 
+            assert is_valid_merkle_branch(
+                #  Next sync committee corresponding to 'attested header'
+                leaf=View.hash_tree_root(update.next_sync_committee),               
+                branch=update.next_sync_committee_branch,                   
+                # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),          
+                index=NEXT_SYNC_COMMITTEE_INDEX,                        
+                root=update.attested_header.state_root,                                   # spec said "attested_header.state_root"
+            )
+            print("Committee is in attested_header.state_root") 
+        else:
+            assert is_valid_merkle_branch(
+                #  Next sync committee corresponding to 'attested header'
+                leaf=View.hash_tree_root(update.next_sync_committee),               
+                branch=update.next_sync_committee_branch,                   
+                # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),          
+                index=NEXT_SYNC_COMMITTEE_INDEX,                        
+                root=update.finalized_header.state_root,                                   # spec said "attested_header.state_root"
+            )
+            print("Committee is in finalized_header.state_root") 
+    
     # "The next_sync_committee can no longer be considered finalized based
     # on is_finality_update. Instead, waiting until finalized_header is
     # in the attested_header's sync committee period is now necessary."  - Etan-Status PR #2932  
-    #  
-    # print('Both proofs work')
-    
+    #
+    # Why, Etan?
+
+
     # Verify sync committee aggregate signature
     if update_signature_period == store_period:
         sync_committee = store.current_sync_committee
@@ -381,17 +392,11 @@ def process_light_client_update(store: LightClientStore,
     ):
         store.optimistic_header = update.attested_header
 
-    # Update finalized header          <--- Spec's comment
-    #
-    # store's sync committee isn't known, there's a sync committee update, 
-    # there's a finality update, and the sync period for update's finalized header is 
-    # equivalent to the sync period for updates attested header.
-    #
-    # "'and' returns true if both statements are true"
-    # In this case, the variable will be true if all conditions are met
-    #
-    #  Does the light client update get wiped out after it's processed?
-    update_has_finalized_next_sync_committee = (
+    #   Does the light client update get wiped out after it's processed?   
+    #   It just changes to the next periods update via sync_to_current_period()
+    # 
+    # Update finalized header
+    update_has_finalized_next_sync_committee = (                                            #  This variable == true when syncing to the current sync period
         not is_next_sync_committee_known(store)
         and is_sync_committee_update(update) and is_finality_update(update) and (
             compute_sync_committee_period_at_slot(update.finalized_header.slot)
@@ -437,62 +442,70 @@ def process_light_client_optimistic_update(store: LightClientStore,
         sync_aggregate=optimistic_update.sync_aggregate,
         signature_slot=optimistic_update.signature_slot,
     )
-    print('\n') 
-    print("Pre process")
-    print("  update's attested header slot: " + str(update.attested_header.slot)) 
     
     process_light_client_update(store, update, current_slot, genesis_validators_root)
-    print('\n') 
-    print("Post process")
-    print("  update's attested header slot: " + str(update.attested_header.slot)) 
-   
+
+
+
+
+
+
+
+
+
+
+
 
 # =============================
 #  IMPORTANT TEST VALUES BELOW!
 # =============================
 
+    # print("\n")
+    # print("\n")
+    # print("\n")
+    # print("\n")
+    # print("\n")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#     print("Store's finalized_header: ")
-#     print("Slot: " + str(store.finalized_header.slot))
-#     print("Sync period: " + str(compute_sync_committee_period_at_slot(store.finalized_header.slot)))
-#     print('\n') 
-#     print("Update's finalized_header: ")
-#     print("Slot: " + str(update.finalized_header.slot))
-#     print("Sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot)))
-#     print('\n') 
-#     print("Update's attested_header: ")
-#     print("Slot: " + str(update.attested_header.slot))
-#     print("Sync period: " + str(compute_sync_committee_period_at_slot(update.attested_header.slot)))
-#     print('\n') 
-
-#     # All differences are multiples of 32 --> which means that all finalized headers in question are at the beginning of an epoch.  Epic 
-#     print("Diff btwn store.finalized_header.slot and update.finalized_header.slot: " + str(update.finalized_header.slot - store.finalized_header.slot )) 
-#     print("Diff btwn update.attested_header.slot and update.finalized_header.slot: " + str(update.attested_header.slot - update.finalized_header.slot )) 
-#     print('\n') 
+    # print("Sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot)))
+    # print("\n")
+    # print("Light Client Store: ")
+    # print("\n")
+    # print("   finalized_header: ")
+    # print("        slot: " + str(store.finalized_header.slot))
+    # print("        proposer_index: " + str(store.finalized_header.proposer_index))
+    # print("        parent_root: " + str(store.finalized_header.parent_root))
+    # print("        state_root: " + str(store.finalized_header.state_root))
+    # print("        body_root: " + str(store.finalized_header.body_root))
+    # print("   current_sync_committee: "  + str(store.current_sync_committee))
+    # print("   next_sync_committee: "  + str(store.next_sync_committee))
+    # print("   best_valid_update: "+ str(store.best_valid_update))
+    # print("   optimistic_header: "+ str(store.optimistic_header))
+    # print("   previous_max_active_participants: "+ str(store.previous_max_active_participants))
+    # print("   current_max_active_participants: "+ str(store.current_max_active_participants))
     
-#     print("current_slot: " + str(current_slot)) 
-#     print("update.signature_slot: " + str(update.signature_slot)) 
-#     print("update.attested_header.slot: " + str(update.attested_header.slot)) 
-#     print("update.finalized_header.slot: " + str(update.finalized_header.slot)) 
+    # print("\n")
+    # print("\n")
+    # print("\n")
+    # print("\n")
+    # print("\n")
+    # print("\n")
+    # print("Light Client Update: ")
+    # print("\n")
+    # print("   attested_header: ")
+    # print("        slot: " + str(update.attested_header.slot))
+    # print("        proposer_index: " + str(update.attested_header.proposer_index))
+    # print("        parent_root: " + str(update.attested_header.parent_root))
+    # print("        state_root: " + str(update.attested_header.state_root))
+    # print("        body_root: " + str(update.attested_header.body_root))
+    # print("   next_sync_committee: "  + str(update.next_sync_committee))
+    # print("   next_sync_committee branch: " + str(bytes(update.next_sync_committee_branch)))
+    # print("   finalized_header: ")
+    # print("        slot: " + str(update.finalized_header.slot))
+    # print("        proposer_index: " + str(update.finalized_header.proposer_index))
+    # print("        parent_root: " + str(update.finalized_header.parent_root))
+    # print("        state_root: " + str(update.finalized_header.state_root))
+    # print("        body_root: " + str(update.finalized_header.body_root))
     
+    # print("   finality_branch: "+ str(bytes(update.finality_branch)))
+    # print("   sync_aggregate: "+ str(update.sync_aggregate))
+    # print("   signature_slot: "+ str(update.signature_slot))

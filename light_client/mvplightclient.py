@@ -70,7 +70,6 @@ def sync_to_current_period(light_client_store) -> int:
       return light_client_update
     else:
       light_client_update = instantiates_sync_period_data(sync_period)
-      print("Sync period: " + str(compute_sync_committee_period_at_slot(light_client_update.finalized_header.slot)))
       #  THIS FUNCTION IS THE ANTITHESIS OF WHAT UPDATESAPI.PY IS CONVERGING TOWARDS!
       process_light_client_update(light_client_store, 
                                   light_client_update, 
@@ -81,13 +80,12 @@ def sync_to_current_period(light_client_store) -> int:
       sync_period += 1
 
 
-# This function is where the light client receives current updates
-def sync_to_current_finalized_header(light_client_store, light_client_update):          
+def sync_to_current_updates(light_client_store, light_client_update):          
   previous_sync_period = 0 
   previous_epoch = 0
   previous_slot = 0
   while 1>0:
-    current_time = uint64(int(time.time()))                          # Where should i put the time variables?  I want them to be outside of these functions 
+    current_time = uint64(int(time.time()))                           
     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
     current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
     current_sync_period = get_current_sync_period(current_time, MIN_GENESIS_TIME) 
@@ -95,7 +93,8 @@ def sync_to_current_finalized_header(light_client_store, light_client_update):
     #  Is it ok for all these conditions to be triggered?  
     #  Or do I need to only allow one condition occur per loop?  (if, elif) 
     #
-    #  More work to be done here! 
+    #  More work to be done here!
+    #  I believe this error occurs during the transition of periods:    Exception: incorrect bitvector input: 1 bits, vector length is: 512
     if current_sync_period - previous_sync_period == 1:
       light_client_update = instantiates_sync_period_data(current_sync_period) 
       process_light_client_update(light_client_store, 
@@ -111,11 +110,9 @@ def sync_to_current_finalized_header(light_client_store, light_client_update):
                                            genesis_validators_root) 
 
     if current_slot - previous_slot == 1:
-      current_header_update_message = calls_api(current_header_update_url).json()                #    Where should this go? If it's outside of the function, 
-      print("light_client_store.optimistic_header")                                              #    the calls_api() just returns the first value it called 
-      print(light_client_store.optimistic_header) 
+      current_header_update_message = calls_api(current_header_update_url).json()                 
       process_slot_for_light_client_store(light_client_store, current_slot)               
-      optimistic_update = instantiates_optimistic_update_data(current_header_update_message)     # Bug inside of here
+      optimistic_update = instantiates_optimistic_update_data(current_header_update_message)     
       process_light_client_optimistic_update(light_client_store,
                                              optimistic_update,
                                              current_slot,
@@ -151,7 +148,7 @@ if __name__ == "__main__":
    Step 3: Sync from current period to current finalized block header. 
    Keep up with the most recent finalized header (Maybe each slot if Lodestar's API is fire.  Ask Cayman)
   """
-  sync_to_current_finalized_header(light_client_store, light_client_update)
+  sync_to_current_updates(light_client_store, light_client_update)
 
 
   # ^^^^ Can I access the light_client_store and light_client_update objects outside of this function?  

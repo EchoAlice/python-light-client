@@ -87,16 +87,14 @@ class LightClientBootstrap(Container):
   current_sync_committee_branch: Vector[Bytes32, floorlog2(CURRENT_SYNC_COMMITTEE_INDEX)]
 
 
-# This is the data we request to stay synced.  We need an update every... epoch or sync period change?
+# This is the data we request to stay synced.  We need an update every time the slot increments.  (Different updates occur given the situation)
 class LightClientUpdate(Container):
   # The beacon block header that is attested to by the sync committee
   attested_header: BeaconBlockHeader
   # Next sync committee corresponding to the active header
-  # The committee branch is a merkle proof that we run against the header
   next_sync_committee: SyncCommittee
   next_sync_committee_branch: Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_INDEX)]
   # The finalized beacon block header attested to by Merkle branch
-  # The header branch is a merkle proof that we run agains the shard block root
   finalized_header: BeaconBlockHeader
   finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
   # Sync committee aggregate signature
@@ -105,23 +103,23 @@ class LightClientUpdate(Container):
   signature_slot: Slot
 
 class LightClientFinalityUpdate(Container):
-    # The beacon block header that is attested to by the sync committee
-    attested_header: BeaconBlockHeader
-    # The finalized beacon block header attested to by Merkle branch
-    finalized_header: BeaconBlockHeader
-    finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
-    # Sync committee aggregate signature
-    sync_aggregate: SyncAggregate
-    # Slot at which the aggregate signature was created (untrusted)
-    signature_slot: Slot
+  # The beacon block header that is attested to by the sync committee
+  attested_header: BeaconBlockHeader
+  # The finalized beacon block header attested to by Merkle branch
+  finalized_header: BeaconBlockHeader
+  finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
+  # Sync committee aggregate signature
+  sync_aggregate: SyncAggregate
+  # Slot at which the aggregate signature was created (untrusted)
+  signature_slot: Slot
 
 class LightClientOptimisticUpdate(Container):
-    # The beacon block header that is attested to by the sync committee
-    attested_header: BeaconBlockHeader
-    # Sync committee aggregate signature
-    sync_aggregate: SyncAggregate
-    # Slot at which the aggregate signature was created (untrusted)
-    signature_slot: Slot
+  # The beacon block header that is attested to by the sync committee
+  attested_header: BeaconBlockHeader
+  # Sync committee aggregate signature
+  sync_aggregate: SyncAggregate
+  # Slot at which the aggregate signature was created (untrusted)
+  signature_slot: Slot
 
 @dataclass
 class LightClientStore(object):
