@@ -1,6 +1,7 @@
 import json
 import requests
 from containers import BeaconBlockHeader, LightClientBootstrap, SyncCommittee
+from updatesapi import initializes_block_header, initializes_sync_committee
 
 def calls_api(url):
   response = requests.get(url)
@@ -31,29 +32,14 @@ trusted_block_root =  parse_hex_to_byte("0x64f23b5e736a96299d25dc1c1f271b0ce4d66
 
 bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0x64f23b5e736a96299d25dc1c1f271b0ce4d666fd9a43f7a0227d16b9d6aed038" 
 bootstrap = calls_api(bootstrap_url)
+bootstrap_header_message = bootstrap['data']['header']
+bootstrap_block_header = initializes_block_header(bootstrap_header_message)
 
-bootstrap_header = bootstrap['data']['header']
+bootstrap_committee_message = bootstrap['data']['current_sync_committee']
+bootstrap_sync_committee = initializes_sync_committee(bootstrap_committee_message)
 
-bootstrap_block_header = BeaconBlockHeader (
-  slot = int(bootstrap_header['slot']),
-  proposer_index = int(bootstrap_header['proposer_index']),
-  parent_root = parse_hex_to_byte(bootstrap_header['parent_root']),
-  state_root = parse_hex_to_byte(bootstrap_header['state_root']),
-  body_root = parse_hex_to_byte(bootstrap_header['body_root']),
-)
-
-bootstrap_sync_committee = bootstrap['data']['current_sync_committee']['pubkeys']
 bootstrap_sync_committee_branch = bootstrap['data']['current_sync_committee_branch']
-parse_list(bootstrap_sync_committee) 
 parse_list(bootstrap_sync_committee_branch) 
-bootstrap_aggregate_pubkey = bootstrap['data']['current_sync_committee']['aggregate_pubkey']
-bootstrap_aggregate_pubkey = parse_hex_to_byte(bootstrap_aggregate_pubkey)
-
-bootstrap_sync_committee = SyncCommittee(
-  pubkeys = bootstrap_sync_committee,
-  aggregate_pubkey = bootstrap_aggregate_pubkey
-)
-
 
 bootstrap_object = LightClientBootstrap(
   header= bootstrap_block_header,
