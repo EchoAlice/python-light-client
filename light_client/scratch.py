@@ -8,7 +8,7 @@ from time import ctime
 from mvplightclient import get_current_slot
 from types import SimpleNamespace
 from eth2spec.utils.hash_function import hash
-from updatesapi import initializes_block_header, instantiates_sync_period_data, initializes_sync_committee, initializes_sync_aggregate
+from updatesapi import initializes_block_header, instantiate_sync_period_data, initializes_sync_committee, initializes_sync_aggregate
 from remerkleable.core import View
 from merkletreelogic import is_valid_merkle_branch
 from py_ecc.bls import G2ProofOfPossession
@@ -80,73 +80,81 @@ def updates_for_period(sync_period):
 #                                                          ==============
 #                                                         ////////\\\\\\\\
 
-test_update = instantiates_sync_period_data(513)
+"""
+fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            
+domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
+signing_root = compute_signing_root(update.attested_header, domain)
 
-print(test_update.attested_header)
-print(test_update.finalized_header)
+assert G2ProofOfPossession.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       # spec uses bls.FastAggregateVerify()
+"""
 
-assert is_valid_merkle_branch(
-  leaf=View.hash_tree_root(test_update.next_sync_committee),              #  Next sync committee corresponding to 'attested header' 
-  branch=test_update.next_sync_committee_branch,                   
-  # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),
-  index=NEXT_SYNC_COMMITTEE_INDEX,
-  root=test_update.attested_header.state_root,                           # spec said "attested_header.state_root"          Must be a bug in the branch, right?            
+
+# @pytest.mark.parametrize("test_input,expected", [("3+5", 8), ("2+4", 6), ("6*9", 42)])
+# def test_eval(test_input, expected):
+#     assert eval(test_input) == expected
+
+
+#  Checking to see if G2ProofOfPossession.FastAggregateVerify works!!!
+sample_message = b'\x12' * 32
+
+Z1_PUBKEY = G1_to_pubkey(Z1)
+Z2_SIGNATURE = G2_to_signature(Z2)
+
+# assert G2ProofOfPossession.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
+
+
+def compute_aggregate_signature(SKs, message):
+    PKs = [G2ProofOfPossession.SkToPk(sk) for sk in SKs]
+    signatures = [G2ProofOfPossession.Sign(sk, message) for sk in SKs]
+    aggregate_signature = G2ProofOfPossession.Aggregate(signatures)
+    return (PKs, aggregate_signature)
+
+@pytest.mark.parametrize(
+    'PKs, aggregate_signature, message, result',
+    [
+        (*compute_aggregate_signature(SKs=[1], message=sample_message), sample_message, True),
+        (*compute_aggregate_signature(SKs=tuple(range(1, 5)), message=sample_message), sample_message, True),
+        ([], Z2_SIGNATURE, sample_message, False),
+        ([G2ProofOfPossession.SkToPk(1), Z1_PUBKEY], G2ProofOfPossession.Sign(1, sample_message), sample_message, False),
+    ]
 )
-print("pass")
 
-
-  #  Data problem???
-  #  
-  #  leaf= hash(udpate.next_sync_committee) 
-  #  branch=update.next_sync_committee_branch 
-  #  index= next_sync_committee_index 
-  #  root = update.finalized_header.state_root
+def test_fast_aggregate_verify(PKs, aggregate_signature, message, result):
+    assert G2ProofOfPossession.FastAggregateVerify(PKs, message, aggregate_signature) == result
 
 
 
 
+# python -m pytest .\light_client\scratch.py
 
-
-
-# This is saying that the update's next sync_committee is not the committee
-# within the attested header's state_root 
+# ^  This is the command to run in the terminal for testing.
 #
-# What I know:
+#    It looks like FastAggregateVerify() works. Something must 
+#    be wrong with my data in the spec  
+
+
+
+
+
+
+
+
+
+
+# What I know about attested_header but:
 #    - The attested header is 75 slots ahead of finalized header. 
 #    - They're within the same sync period
 #    - The data is organized properly
 #    - 
-#    -
-#    -
-#    -
-#    -
-#    -
-#    -
-#    -
+#    
+#
+#  Maybe this isn't a bug at all? Before the new updated spec, 
+#  the finalized header was the header being checked
 
 
 
 
 
-
-
-
-#  calling an update for a period gives you...
-
-# sync_period = 512
-# sync_period_update = updates_for_period(sync_period).json()
-
-# attested_block_header = initializes_block_header(sync_period_update['data'][0]['attested_header']) 
-# next_sync_committee = initializes_sync_committee(sync_period_update['data'][0]['next_sync_committee'])
-# finalized_block_header = initializes_block_header(sync_period_update['data'][0]['finalized_header']) 
-
-# print("attested header: ")
-# print("   slot: " + str(attested_block_header.slot))
-# print("   period: " + str(compute_sync_committee_period_at_slot(attested_block_header.slot)))
-
-# print("finalized header: ")
-# print("   slot: " + str(finalized_block_header.slot))
-# print("   period: " + str(compute_sync_committee_period_at_slot(finalized_block_header.slot)))
 
 
 
@@ -225,48 +233,6 @@ print("pass")
 
 
 
-
-
-
-# @pytest.mark.parametrize("test_input,expected", [("3+5", 8), ("2+4", 6), ("6*9", 42)])
-# def test_eval(test_input, expected):
-#     assert eval(test_input) == expected
-
-
-# #  Checking to see if G2ProofOfPossession.FastAggregateVerify works!!!
-# sample_message = b'\x12' * 32
-
-# Z1_PUBKEY = G1_to_pubkey(Z1)
-# Z2_SIGNATURE = G2_to_signature(Z2)
-
-
-
-# def compute_aggregate_signature(SKs, message):
-#     PKs = [G2ProofOfPossession.SkToPk(sk) for sk in SKs]
-#     signatures = [G2ProofOfPossession.Sign(sk, message) for sk in SKs]
-#     aggregate_signature = G2ProofOfPossession.Aggregate(signatures)
-#     return (PKs, aggregate_signature)
-
-# @pytest.mark.parametrize(
-#     'PKs, aggregate_signature, message, result',
-#     [
-#         (*compute_aggregate_signature(SKs=[1], message=sample_message), sample_message, True),
-#         (*compute_aggregate_signature(SKs=tuple(range(1, 5)), message=sample_message), sample_message, True),
-#         ([], Z2_SIGNATURE, sample_message, False),
-#         ([G2ProofOfPossession.SkToPk(1), Z1_PUBKEY], G2ProofOfPossession.Sign(1, sample_message), sample_message, False),
-#     ]
-# )
-
-# def test_fast_aggregate_verify(PKs, aggregate_signature, message, result):
-#     assert G2ProofOfPossession.FastAggregateVerify(PKs, message, aggregate_signature) == result
-
-
-# python -m pytest .\light_client\scratch.py
-
-# ^  This is the command to run in the terminal for testing.
-#
-#    It looks like FastAggregateVerify() works. Something must 
-#    be wrong with my data in the spec  
 
 
 
