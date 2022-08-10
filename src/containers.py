@@ -12,7 +12,6 @@ Bytes32 = Vector[byte, 32]
 Bytes48 = Vector[byte, 48]
 Bytes96 = Vector[byte, 96]
 
-# Data type.      Maybe this should be a Vector? idk
 # Define custom types (aka alliases):
 Slot = uint64
 Epoch = uint64
@@ -26,7 +25,7 @@ BLSPubkey =	Bytes48
 BLSSignature = Bytes96
 DomainType = Bytes4
 Domain = Bytes32
-SSZObject = Container                                                    #  Is this correct?
+SSZObject = Container                                                  #  Is an SSZObject just a Container class?
 genesis_validators_root = b'K6=\xb9N(a \xd7n\xb9\x054\x0f\xddNT\xbf\xe9\xf0k\xf3?\xf6\xcfZ\xd2\x7fQ\x1b\xfe\x95' 
 
 # Constants
@@ -47,10 +46,6 @@ SYNC_COMMITTEE_SIZE = 512
 SLOTS_PER_SYNC_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 UPDATE_TIMEOUT = SLOTS_PER_SYNC_PERIOD 
 
-
-# Generalized indices for finalized checkpoint and next sync committee in a BeaconState.
-# A Generalized index is a way of referring to a poisition of an object in a merkle tree,
-# so that the Merkle proof verification algorithm knows what path to check the hashes against
 
 # If all goes well, we'll update our light client memory with this header
 # The header is the key trusted piece of data we use to verify merkle proofs against.

@@ -10,35 +10,12 @@ from containers import (Bytes32,
                         LightClientUpdate, 
                         SyncAggregate, 
                         SyncCommittee)
-
-def calls_api(url):
-  response = requests.get(url)
-  return response
-
-def parse_hex_to_byte(hex_string):
-  if hex_string[:2] == '0x':
-    hex_string = hex_string[2:]
-  byte_string = bytes.fromhex(hex_string)
-  return byte_string 
-
-def parse_hex_to_bit(hex_string):
-  int_representation = int(hex_string, 16)
-  binary_vector = bin(int_representation) 
-  if binary_vector[:2] == '0b':
-    binary_vector = binary_vector[2:]
-  return binary_vector 
-
-def parse_list(list):
-  for i in range(len(list)):
-    list[i] = parse_hex_to_byte(list[i])
-
-def updates_for_period(sync_period):
-  sync_period = str(sync_period) 
-  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period="+sync_period+"&count=1" 
-  response = calls_api(updates_url)
-
-  return response
-
+from helper import(call_api,
+                   parse_hex_to_byte,
+                   parse_hex_to_bit,
+                   parse_list,
+                   updates_for_period,
+)
 
 def initialize_block_header(header_message):
   block_header = BeaconBlockHeader (
@@ -75,7 +52,6 @@ def initialize_sync_aggregate(aggregate_message):
     sync_committee_signature = sync_committee_signature 
   )
   return sync_aggregate
-
 
 
 #                                                \~~~~~~~~~~~~~~~~~~/
