@@ -1,12 +1,13 @@
-from bootstrapapi import bootstrap_object, trusted_block_root
+import time
 from containers import (genesis_validators_root,
                         MIN_GENESIS_TIME, 
                         uint64)
-from updatesapi import (initialize_block_header, 
-                        instantiate_sync_period_data,
-                        instantiate_finality_update_data, 
-                        instantiate_optimistic_update_data, 
-                        updates_for_period)
+from api import (bootstrap_object,
+                 trusted_block_root,
+                 instantiate_sync_period_data,
+                 instantiate_finality_update_data, 
+                 instantiate_optimistic_update_data, 
+                 updates_for_period)
 from specfunctions import (compute_sync_committee_period_at_slot, 
                            initialize_light_client_store,
                            process_light_client_update,
@@ -17,15 +18,7 @@ from helper import(call_api,
                    get_current_epoch,
                    get_current_slot,
                    get_current_sync_period,
-                   get_status_code, 
-                   parse_hex_to_bit,
-                   parse_hex_to_byte,
-                   parse_list,
-
 )
-import time
-import json
-import requests
 
 def sync_to_current_period(light_client_store) -> int:
   sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)     # Which variable should I use to compute the sync period?
@@ -108,17 +101,17 @@ if __name__ == "__main__":
     Step 1: Initialize the light client store
   """
   light_client_store = initialize_light_client_store(trusted_block_root, bootstrap_object)
-  
+   
   """  
     Step 2: Sync from bootstrap period to current period 
   """
   light_client_update = sync_to_current_period(light_client_store)
-
+   
   """
    Step 3: Sync from current period to current finalized block header. 
    Keep up with the most recent finalized header (Maybe each slot if Lodestar's API is fire.  Ask Cayman)
   """
   sync_to_current_updates(light_client_store, light_client_update)
-
-
+     
+     
   # ^^^^ Can I access the light_client_store and light_client_update objects outside of this function?  

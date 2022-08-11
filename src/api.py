@@ -49,6 +49,7 @@ def initialize_sync_aggregate(aggregate_message):
   return sync_aggregate
 
 
+
 #  =================================
 #  CREATE BOOTSTRAP CONTAINER OBJECT
 #  =================================
@@ -74,6 +75,8 @@ bootstrap_object = LightClientBootstrap(
   current_sync_committee= bootstrap_sync_committee,
   current_sync_committee_branch= bootstrap_sync_committee_branch
 )
+
+
 
 #  ================
 #  UPDATE FUNCTIONS

@@ -1,36 +1,25 @@
-import json
 import requests
 from merkletreelogic import floorlog2
 from remerkleable.core import View
 from containers import (ALTAIR_FORK_EPOCH,
                         ALTAIR_FORK_VERSION,
-                        CURRENT_SYNC_COMMITTEE_INDEX,
-                        DOMAIN_SYNC_COMMITTEE,
                         EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
                         FINALIZED_ROOT_INDEX,
                         GENESIS_FORK_VERSION, 
-                        GENESIS_SLOT,
-                        MIN_GENESIS_TIME, 
-                        MIN_SYNC_COMMITTEE_PARTICIPANTS, 
                         NEXT_SYNC_COMMITTEE_INDEX, 
                         SECONDS_PER_SLOT,
                         SLOTS_PER_EPOCH,
                         SLOTS_PER_SYNC_PERIOD,
-                        UPDATE_TIMEOUT,
                         Bytes32,
                         Domain, 
                         DomainType,
                         Epoch, 
                         Root, 
-                        Slot,
                         SSZObject, 
                         Version,
                         uint64,
                         BeaconBlockHeader,
                         ForkData,
-                        LightClientBootstrap,
-                        LightClientFinalityUpdate,
-                        LightClientOptimisticUpdate,
                         LightClientStore, 
                         LightClientUpdate, 
                         SigningData, 
@@ -53,12 +42,6 @@ def get_current_slot(current_time, genesis_time):
 def get_current_sync_period(current_time, genesis_time):
   current_sync_period = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
   return current_sync_period
-
-def get_status_code(sync_period):
-  sync_period = str(sync_period) 
-  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period="+sync_period+"&count=1" 
-  status_code = requests.get(updates_url).status_code
-  return status_code
 
 def parse_hex_to_bit(hex_string):
   int_representation = int(hex_string, 16)
