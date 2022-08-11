@@ -42,7 +42,7 @@ from helper import (compute_epoch_at_slot,
                     is_sync_committee_update,
 )
 from merkletreelogic import floorlog2, is_valid_merkle_branch
-from py_ecc.bls import G2ProofOfPossession
+from py_ecc.bls.ciphersuites import G2ProofOfPossession                   
 from remerkleable.core import View
 
 
