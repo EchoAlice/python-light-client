@@ -1,5 +1,5 @@
 import time
-from containers import (genesis_validators_root,
+from containers import (LightClientUpdate, genesis_validators_root,
                         MIN_GENESIS_TIME, 
                         uint64)
 from api import (bootstrap_object,
@@ -21,6 +21,7 @@ from helper import(call_api,
 )
 
 def sync_to_current_period(light_client_store) -> int:
+  light_client_update = LightClientUpdate() 
   sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)     # Which variable should I use to compute the sync period?
   while 1>0:
     current_time = uint64(int(time.time()))
@@ -28,12 +29,9 @@ def sync_to_current_period(light_client_store) -> int:
     updates_status_code = updates_for_period(sync_period).status_code
 
     # Checks if api call executed properly 
-    if updates_status_code == 500:
-      sync_period = sync_period - 1 
-      return light_client_update
-    else:
+    if updates_status_code == 200:
       light_client_update = instantiate_sync_period_data(sync_period)
-      #  THIS FUNCTION IS THE ANTITHESIS OF WHAT UPDATESAPI.PY IS CONVERGING TOWARDS!
+      #  This function is the antithesis of what the project is converging towards
       process_light_client_update(light_client_store, 
                                   light_client_update, 
                                   current_slot,
@@ -41,6 +39,10 @@ def sync_to_current_period(light_client_store) -> int:
       time.sleep(1)
       # Increment the sync period until we reach the current period.  
       sync_period += 1
+
+    else:
+      sync_period = sync_period - 1 
+      return light_client_update
 
 
 def sync_to_current_updates(light_client_store, light_client_update):          
@@ -53,11 +55,7 @@ def sync_to_current_updates(light_client_store, light_client_update):
     current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
     current_sync_period = get_current_sync_period(current_time, MIN_GENESIS_TIME) 
 
-    #  Is it ok for all these conditions to be triggered?  
-    #  Or do I need to only allow one condition occur per loop?  (if, elif) 
-    #
-    #  More work to be done here!
-    #  I believe this error occurs during the transition of periods:    "Exception: incorrect bitvector input: 1 bits, vector length is: 512"
+    #  I believe error occurs during the transition of periods:    "Exception: incorrect bitvector input: 1 bits, vector length is: 512"
     if current_sync_period - previous_sync_period == 1:
       light_client_update = instantiate_sync_period_data(current_sync_period) 
       process_light_client_update(light_client_store, 
@@ -89,12 +87,11 @@ def sync_to_current_updates(light_client_store, light_client_update):
   return
 
 
-
 # ================
 # UPDATE VARIABLES
 # ================
-current_finality_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/finality_update/" 
-current_header_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/optimistic_update/" 
+current_finality_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/finality_update/" 
+current_header_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/optimistic_update/" 
 
 if __name__ == "__main__":
   """ 
@@ -112,6 +109,3 @@ if __name__ == "__main__":
    Keep up with the most recent finalized header (Maybe each slot if Lodestar's API is fire.  Ask Cayman)
   """
   sync_to_current_updates(light_client_store, light_client_update)
-     
-     
-  # ^^^^ Can I access the light_client_store and light_client_update objects outside of this function?  

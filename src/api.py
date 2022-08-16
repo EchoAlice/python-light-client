@@ -54,7 +54,7 @@ def initialize_sync_aggregate(aggregate_message):
 #  CREATE BOOTSTRAP CONTAINER OBJECT
 #  =================================
 checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
-bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/bootstrap/0xd475339cea53c7718fd422d6583e4c1700d7492f94b5b83cf871899b2701846b" 
+bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0xd475339cea53c7718fd422d6583e4c1700d7492f94b5b83cf871899b2701846b" 
 trusted_block_root =  parse_hex_to_byte("0xd475339cea53c7718fd422d6583e4c1700d7492f94b5b83cf871899b2701846b")
 
 checkpoint = call_api(checkpoint_url).json()

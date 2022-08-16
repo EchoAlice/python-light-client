@@ -62,7 +62,7 @@ def parse_list(list):
 
 def updates_for_period(sync_period):
   sync_period = str(sync_period) 
-  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/light_client/updates?start_period="+sync_period+"&count=1" 
+  updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/updates?start_period="+sync_period+"&count=1" 
   response = call_api(updates_url)
   return response
 
