@@ -25,7 +25,6 @@ from containers import (ALTAIR_FORK_EPOCH,
                         SigningData, 
                         SyncCommittee)
 
-
 # I want to use this call_api throughout all code.  Specify what to do with it in each instance of the call 
 def call_api(url):
   response = requests.get(url)
@@ -56,9 +55,11 @@ def parse_hex_to_byte(hex_string):
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
 
+# Should this return list?
 def parse_list(list):
   for i in range(len(list)):
     list[i] = parse_hex_to_byte(list[i])
+  return list
 
 def updates_for_period(sync_period):
   sync_period = str(sync_period) 

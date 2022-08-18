@@ -26,20 +26,18 @@ def sync_to_current_period(light_client_store) -> int:
   while 1>0:
     current_time = uint64(int(time.time()))
     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
-    updates_status_code = updates_for_period(sync_period).status_code
-
-    # Checks if api call executed properly 
-    if updates_status_code == 200:
-      light_client_update = instantiate_sync_period_data(sync_period)
+    updates = updates_for_period(sync_period)
+ 
+    # This should be turned into its own function and reused inside of sync_to_current_updates 
+    if updates.status_code == 200:
+      light_client_update = instantiate_sync_period_data(updates.json())
       #  This function is the antithesis of what the project is converging towards
       process_light_client_update(light_client_store, 
                                   light_client_update, 
                                   current_slot,
                                   genesis_validators_root)                   
       time.sleep(1)
-      # Increment the sync period until we reach the current period.  
       sync_period += 1
-
     else:
       sync_period = sync_period - 1 
       return light_client_update
@@ -54,10 +52,11 @@ def sync_to_current_updates(light_client_store, light_client_update):
     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
     current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
     current_sync_period = get_current_sync_period(current_time, MIN_GENESIS_TIME) 
-
-    #  I believe error occurs during the transition of periods:    "Exception: incorrect bitvector input: 1 bits, vector length is: 512"
+    updates = updates_for_period(current_sync_period)
+    
+    #  Error occurs during the transition of periods:    "Exception: incorrect bitvector input: 1 bits, vector length is: 512"
     if current_sync_period - previous_sync_period == 1:
-      light_client_update = instantiate_sync_period_data(current_sync_period) 
+      light_client_update = instantiate_sync_period_data(updates.json()) 
       process_light_client_update(light_client_store, 
                                   light_client_update, 
                                   current_slot,
