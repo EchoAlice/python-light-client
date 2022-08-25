@@ -3,15 +3,15 @@ computationally constrained environment.  Having the current block header allows
 events/transactions have occured-  all without having to trust a 3rd party node operator to verify said  
 transactions for you.
 
-In order for the light client to get information needed to: 
+**Steps for Light Client:**
   1) Bootstrap to a period  --> 
   2) Sync from the bootstrapping period to the current period  -->
   3) Sync from the current period to the head of the chain  -->
   4) Continue staying synced to the head as new blocks are created
 
-the light client must get data from somewhere.  The "Light Ethereum Subprotocol" (LES) is the network which 
-serves said data to light clients.  This network is designed with a client/server architecture where Lodestar
-is the light client server, and this is the light client.  
+In order for the light client to execute these steps it must get its data from somewhere.  
+The "Light Ethereum Subprotocol" (LES) is a network which serves said data to light clients in a client/server
+architecture. Lodestar has an implementation of LES and is this light client's server.   
 
 
 **Current Problems**
@@ -23,8 +23,8 @@ is the light client server, and this is the light client.
 
   - py_ecc_bls.FastAggregateVerify() is throwing an assertion error when verifying the update's attested header.
     Basically, the sync committee's signatures aren't verifying that the attested header is legitimate.  This is
-    a huge problem as this is the whole point of the light client.
-    Within src/test/crypto.py you can find a test that shows the function itself works properly... So it must be
+    a problem as this is the whole point of the light client.
+    Within src/test.py you can find a test that shows the function itself works properly... So it must be
     a data problem, but I'm not sure where the problem lies. 
 
 
