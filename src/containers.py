@@ -1,10 +1,14 @@
 from dataclasses import dataclass
-from merkletreelogic import floorlog2
+from math import floor, log2
 from remerkleable.basic import uint64, byte
 from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
 from typing import Optional
 import time
+
+# This is here instead of helper.py bc sys.path.append() bug...
+def floorlog2(x) -> int:
+  return floor(log2(x))
 
 # Alliases:  (Helps readability of code)
 Bytes4 = Vector[byte, 4]
@@ -92,10 +96,8 @@ class LightClientUpdate(Container):
   # The finalized beacon block header attested to by Merkle branch
   finalized_header: BeaconBlockHeader
   finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
-  # Sync committee aggregate signature
+  # Sync committee aggregate signature (sig for previous block)
   sync_aggregate: SyncAggregate
-  # Slot at which the aggregate signature was created (untrusted)
-  signature_slot: Slot
 
 class LightClientFinalityUpdate(Container):
   # The beacon block header that is attested to by the sync committee
@@ -105,16 +107,12 @@ class LightClientFinalityUpdate(Container):
   finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
   # Sync committee aggregate signature
   sync_aggregate: SyncAggregate
-  # Slot at which the aggregate signature was created (untrusted)
-  signature_slot: Slot
 
 class LightClientOptimisticUpdate(Container):
   # The beacon block header that is attested to by the sync committee
   attested_header: BeaconBlockHeader
   # Sync committee aggregate signature
   sync_aggregate: SyncAggregate
-  # Slot at which the aggregate signature was created (untrusted)
-  signature_slot: Slot
 
 @dataclass
 class LightClientStore(object):

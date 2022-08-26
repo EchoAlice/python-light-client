@@ -23,6 +23,7 @@ from helper import(call_api,
 def sync_to_current_period(light_client_store) -> int:
   light_client_update = LightClientUpdate() 
   sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)     # Which variable should I use to compute the sync period?
+  print("sync period: "+str(sync_period))  #  Am I using the correct sync period?  
   while 1>0:
     current_time = uint64(int(time.time()))
     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)

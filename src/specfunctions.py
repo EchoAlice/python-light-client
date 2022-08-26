@@ -27,23 +27,21 @@ from helper import (compute_epoch_at_slot,
                     is_sync_committee_update,
 )
 from merkletreelogic import floorlog2, is_valid_merkle_branch
-from py_ecc.bls.ciphersuites import G2ProofOfPossession                   
+from py_ecc.bls import G2ProofOfPossession as py_ecc_bls                       # I believe both of these work
 from remerkleable.core import View
 
 
+#                                           \~~~~~~~~~~~~~~~~~~/
+#                                            \ ============== /
+#                                              SPEC FUNCTIONS
+#                                            / ============== \
+#                                           /~~~~~~~~~~~~~~~~~~\
 
+# ===========================
+# Light Client Initialization
+# ===========================
 
-
-#                                           \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
-#                                            \ =========================== /
-#
-#                                              Light Client Initialization
-#
-#                                            / =========================== \
-#                                           /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-
-def initialize_light_client_store(trusted_block_root: Root,
-                                  bootstrap: LightClientBootstrap) -> LightClientStore:
+def initialize_light_client_store(trusted_block_root: Root, bootstrap: LightClientBootstrap) -> LightClientStore:
     assert View.hash_tree_root(bootstrap.header) == trusted_block_root
 
     assert is_valid_merkle_branch(
@@ -53,7 +51,6 @@ def initialize_light_client_store(trusted_block_root: Root,
         index=CURRENT_SYNC_COMMITTEE_INDEX,
         root=bootstrap.header.state_root,
     )
-
     return LightClientStore(
         finalized_header=bootstrap.header,
         current_sync_committee=bootstrap.current_sync_committee,
@@ -65,14 +62,9 @@ def initialize_light_client_store(trusted_block_root: Root,
     )
 
 
-
-#                                           \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~/
-#                                            \ ========================== /
-#
-#                                              Light Client State Updates
-#
-#                                            / ========================== \
-#                                           /~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+# ====================
+# Light Client Updates
+# ====================
 
 def process_slot_for_light_client_store(store: LightClientStore, current_slot: Slot) -> None:
     # This indicates a shift from one sync period to the next 
@@ -95,34 +87,34 @@ def process_slot_for_light_client_store(store: LightClientStore, current_slot: S
 
 
 #  Look at the currentquestions.py file
-#
-#  MAP THE LINKS OF THE ROOTS WE USE IN MERKLE PROOFS BACK TO THE TRUSTED CHECKPOINT ROOT!  Create a diagram
 def validate_light_client_update(store: LightClientStore,
                                  update: LightClientUpdate,
                                  current_slot: Slot,
                                  genesis_validators_root: Root,
                                  ) -> None:
-    print("\n") 
-    print("Store's sync period: " + str(compute_sync_committee_period_at_slot(store.finalized_header.slot)))
-    print("Update's sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot)))
     
     # Verify sync committee has sufficient participants
     sync_aggregate = update.sync_aggregate
     assert sum(sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 
     # Verify update does not skip a sync committee period
-    assert current_slot >= update.signature_slot > update.attested_header.slot >= update.finalized_header.slot 
+    assert current_slot > update.attested_header.slot >= update.finalized_header.slot 
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.slot)
     update_signature_period = compute_sync_committee_period_at_slot(update.signature_slot)
-
-    if is_next_sync_committee_known(store):                                          #    Next committee is known when you're past the bootstrap initialization
+    
+    print("\n") 
+    print("Store's sync period: " + str(store_period))
+    print("Update's sync period: " + str(update_signature_period))
+    # Next committee is known when you're past the bootstrap initialization
+    if is_next_sync_committee_known(store):                                          
         assert update_signature_period in (store_period, store_period + 1)                        
     else:
         assert update_signature_period == store_period                         
 
     # Verify update is relevant
     update_attested_period = compute_sync_committee_period_at_slot(update.attested_header.slot)
-    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (                #   <----  I believe this takes care of the bootstrap period messiness 
+    # This takes care of the bootstrap period messiness
+    update_has_next_sync_committee = not is_next_sync_committee_known(store) and (                 
         is_sync_committee_update(update) and update_attested_period == store_period                
     )                                                                                                      
     assert (
@@ -144,18 +136,12 @@ def validate_light_client_update(store: LightClientStore,
         assert is_valid_merkle_branch(
             leaf=finalized_root,
             branch=update.finality_branch,
-            # depth=floorlog2(FINALIZED_ROOT_INDEX),
             index=FINALIZED_ROOT_INDEX,                                
             root=update.attested_header.state_root,
         )
     #        ^^^ THIS ASSERTION PASSES!
 
-    # ========================================================================================== 
-    #  I need to create/use a test suite. Look at Etan's test files.  Look at Clara's test files 
-    # ========================================================================================== 
-
-    # Verify that the `next_sync_committee`, if present, actually is the next sync committee saved in the
-    # state of the `attested_header`
+    # Verify that the next_sync_committee, if present, actually is the next sync committee saved in the state of the attested_header
     if not is_sync_committee_update(update):      
         assert update.next_sync_committee == SyncCommittee()
     else:
@@ -166,9 +152,9 @@ def validate_light_client_update(store: LightClientStore,
             #  Next sync committee corresponding to 'attested header'
             leaf=View.hash_tree_root(update.next_sync_committee),               
             branch=update.next_sync_committee_branch,                   
-            # depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX),          
             index=NEXT_SYNC_COMMITTEE_INDEX,                        
-            root=update.finalized_header.state_root,                                   # spec said "attested_header.state_root"
+            root=update.finalized_header.state_root,                                   
+            # root=update.attested_header.state_root,              # <--- spec says this                     
         )
     
     # "The next_sync_committee can no longer be considered finalized based
@@ -184,28 +170,13 @@ def validate_light_client_update(store: LightClientStore,
         pubkey for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
         if bit
     ]
+    # Maybe my update.attested_header is wrong?  Check my pubkeys logic too.   
 
-    fork_version = compute_fork_version(compute_epoch_at_slot(update.signature_slot))            
+    fork_version = compute_fork_version(compute_epoch_at_slot(update.attested_header.slot))      # update.signature_slot     
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
     signing_root = compute_signing_root(update.attested_header, domain)
 
-
-    #   Muting assertion for now.  Do ya think the assertion might not work
-    #   because of something that's wrong in the update.next_sync_committee assertion?
-    #   What if I just use the fork version given to me in the update api?
-    # 
-    #   There are a lot of constants/different pieces of data going into this thing... For instance,
-    #   signing_root takes in update's attested_header and domain!  
-    #   Is my update.attested_header wrong???  
-    #   That might explain why my proof doesn't match my attested_header.state_root! <-----Noooo because 
-    #                                                            the update.attested_header.state works in the proof right before it   
-
-    # DATA CHECK
-    #    fork_version: Same in constant as it is in function.  PASS
-    #    domain:          found the genesis validators root.   PASS
-    #    signing root:    If the fork_version and domain are correct, that leaves me with the attested_header.
-
-    assert G2ProofOfPossession.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       # spec uses bls.FastAggregateVerify()
+    assert py_ecc_bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       
     print("Validation successful")
 
 
@@ -305,8 +276,14 @@ def process_light_client_optimistic_update(store: LightClientStore,
     process_light_client_update(store, update, current_slot, genesis_validators_root)
 
 
+#                                           \~~~~~~~~~~~~~~~~~~/
+#                                            \ ============== /
+#                                               MY FUNCTIONS
+#                                            / ============== \
+#                                           /~~~~~~~~~~~~~~~~~~\
 
 
+#  Move lightclient.py functions here when Lodestar's servers are back up.
 
 
 
