@@ -1,21 +1,17 @@
 from turtle import update
-from containers import (BeaconBlockHeader,
-                        LightClientBootstrap,
-                        LightClientFinalityUpdate,
-                        LightClientOptimisticUpdate, 
-                        LightClientUpdate, 
-                        SyncAggregate, 
-                        SyncCommittee,)
-from helper import(call_api,
-                   parse_hex_to_byte,
-                   parse_hex_to_bit,
-                   parse_list,
-                   updates_for_period,
+from containers import ( BeaconBlockHeader,
+                         LightClientBootstrap,
+                         LightClientFinalityUpdate,
+                         LightClientOptimisticUpdate, 
+                         LightClientUpdate, 
+                         SyncAggregate, 
+                         SyncCommittee,)
+from helper import( call_api,
+                    parse_hex_to_byte,
+                    parse_hex_to_bit,
+                    parse_list,
 )
 
-# Should the return objects be written like this? 
-#   light_client_update = LightClientUpdate(...)
-#   return light_client_update
 def initialize_block_header(header_message):
   return BeaconBlockHeader (
     slot =  int(header_message['slot']),
@@ -37,15 +33,21 @@ def initialize_sync_committee(committee_message):
     aggregate_pubkey = parse_hex_to_byte(committee_message['aggregate_pubkey'])
   )
 
+# ======
+#  URLs
+# ======
+checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
+bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0xd475339cea53c7718fd422d6583e4c1700d7492f94b5b83cf871899b2701846b" 
+current_finality_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/finality_update/" 
+current_header_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/optimistic_update/" 
 
 #  =================================
 #  CREATE BOOTSTRAP CONTAINER OBJECT
 #  =================================
-# checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
-# checkpoint = call_api(checkpoint_url).json()
-# finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
-bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0xd475339cea53c7718fd422d6583e4c1700d7492f94b5b83cf871899b2701846b" 
-# Create conditional statements for all api calls
+
+# Create conditional statements for all api calls!!!
+checkpoint = call_api(checkpoint_url).json()
+finalized_checkpoint_root = checkpoint['data']['finalized']['root']  
 bootstrap = call_api(bootstrap_url).json()
 trusted_block_root =  parse_hex_to_byte("0xd475339cea53c7718fd422d6583e4c1700d7492f94b5b83cf871899b2701846b")
 

@@ -1,35 +1,52 @@
-from containers import (CURRENT_SYNC_COMMITTEE_INDEX,
-                        DOMAIN_SYNC_COMMITTEE,
-                        FINALIZED_ROOT_INDEX,
-                        GENESIS_SLOT, 
-                        MIN_SYNC_COMMITTEE_PARTICIPANTS, 
-                        NEXT_SYNC_COMMITTEE_INDEX, 
-                        UPDATE_TIMEOUT,
-                        Bytes32,
-                        Root, 
-                        Slot,
-                        BeaconBlockHeader,
-                        LightClientBootstrap,
-                        LightClientFinalityUpdate,
-                        LightClientOptimisticUpdate,
-                        LightClientStore, 
-                        LightClientUpdate, 
-                        SyncCommittee)
-from helper import (compute_epoch_at_slot,
-                    compute_domain,
-                    compute_fork_version,
-                    compute_signing_root,
-                    compute_sync_committee_period_at_slot,
-                    get_safety_threshold,
-                    is_better_update,
-                    is_finality_update,
-                    is_next_sync_committee_known,
-                    is_sync_committee_update,
+import time
+from api import ( current_finality_update_url,
+                  current_header_update_url,
+                  instantiate_sync_period_data,
+                  instantiate_finality_update_data, 
+                  instantiate_optimistic_update_data, 
 )
-from merkletreelogic import floorlog2, is_valid_merkle_branch
-from py_ecc.bls import G2ProofOfPossession as py_ecc_bls                       # I believe both of these work
+from containers import ( CURRENT_SYNC_COMMITTEE_INDEX,
+                         DOMAIN_SYNC_COMMITTEE,
+                         FINALIZED_ROOT_INDEX,
+                         GENESIS_SLOT, 
+                         MIN_GENESIS_TIME,
+                         MIN_SYNC_COMMITTEE_PARTICIPANTS, 
+                         NEXT_SYNC_COMMITTEE_INDEX, 
+                         UPDATE_TIMEOUT,
+                         Bytes32,
+                         genesis_validators_root,
+                         Root, 
+                         Slot,
+                         BeaconBlockHeader,
+                         LightClientBootstrap,
+                         LightClientFinalityUpdate,
+                         LightClientOptimisticUpdate,
+                         LightClientStore, 
+                         LightClientUpdate, 
+                         SyncCommittee,
+                         uint64,
+)
+from helper import ( call_api,
+                     compute_epoch_at_slot,
+                     compute_domain,
+                     compute_fork_version,
+                     compute_signing_root,
+                     compute_sync_committee_period_at_slot,
+                     floorlog2, 
+                     get_current_epoch,
+                     get_current_slot,
+                     get_current_sync_period,
+                     get_safety_threshold,
+                     hash_pair, 
+                     index_to_path, 
+                     is_better_update,
+                     is_finality_update,
+                     is_next_sync_committee_known,
+                     is_sync_committee_update,
+                     updates_for_period,
+)
+from py_ecc.bls import G2ProofOfPossession as py_ecc_bls                       
 from remerkleable.core import View
-
 
 #                                           \~~~~~~~~~~~~~~~~~~/
 #                                            \ ============== /
@@ -100,7 +117,7 @@ def validate_light_client_update(store: LightClientStore,
     # Verify update does not skip a sync committee period
     assert current_slot > update.attested_header.slot >= update.finalized_header.slot 
     store_period = compute_sync_committee_period_at_slot(store.finalized_header.slot)
-    update_signature_period = compute_sync_committee_period_at_slot(update.signature_slot)
+    update_signature_period = compute_sync_committee_period_at_slot(update.attested_header.slot)          # update.signature_slot 
     
     print("\n") 
     print("Store's sync period: " + str(store_period))
@@ -282,76 +299,97 @@ def process_light_client_optimistic_update(store: LightClientStore,
 #                                            / ============== \
 #                                           /~~~~~~~~~~~~~~~~~~\
 
+# ====================
+# Sync Data Structures
+# ====================
 
-#  Move lightclient.py functions here when Lodestar's servers are back up.
+def sync_to_current_period(light_client_store) -> int:
+  light_client_update = LightClientUpdate() 
+  sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)     # Which variable should I use to compute the sync period?
+  print("sync period: "+str(sync_period))  #  Am I using the correct sync period?  
+  while 1>0:
+    current_time = uint64(int(time.time()))
+    current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+    updates = updates_for_period(sync_period)
+ 
+    # This should be turned into its own function and reused inside of sync_to_current_updates 
+    if updates.status_code == 200:
+      light_client_update = instantiate_sync_period_data(updates.json())
+      #  This function is the antithesis of what the project is converging towards
+      process_light_client_update(light_client_store, 
+                                  light_client_update, 
+                                  current_slot,
+                                  genesis_validators_root)                   
+      time.sleep(1)
+      sync_period += 1
+    else:
+      sync_period = sync_period - 1 
+      return light_client_update
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# =============================
-#  IMPORTANT TEST VALUES BELOW!
-# =============================
-
-    # print("\n")
-    # print("\n")
-    # print("\n")
-    # print("\n")
-    # print("\n")
-
-    # print("Sync period: " + str(compute_sync_committee_period_at_slot(update.finalized_header.slot)))
-    # print("\n")
-    # print("Light Client Store: ")
-    # print("\n")
-    # print("   finalized_header: ")
-    # print("        slot: " + str(store.finalized_header.slot))
-    # print("        proposer_index: " + str(store.finalized_header.proposer_index))
-    # print("        parent_root: " + str(store.finalized_header.parent_root))
-    # print("        state_root: " + str(store.finalized_header.state_root))
-    # print("        body_root: " + str(store.finalized_header.body_root))
-    # print("   current_sync_committee: "  + str(store.current_sync_committee))
-    # print("   next_sync_committee: "  + str(store.next_sync_committee))
-    # print("   best_valid_update: "+ str(store.best_valid_update))
-    # print("   optimistic_header: "+ str(store.optimistic_header))
-    # print("   previous_max_active_participants: "+ str(store.previous_max_active_participants))
-    # print("   current_max_active_participants: "+ str(store.current_max_active_participants))
+def sync_to_current_updates(light_client_store, light_client_update):          
+  previous_sync_period = 0 
+  previous_epoch = 0
+  previous_slot = 0
+  while 1>0:
+    current_time = uint64(int(time.time()))                           
+    current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+    current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
+    current_sync_period = get_current_sync_period(current_time, MIN_GENESIS_TIME) 
+    updates = updates_for_period(current_sync_period)
     
-    # print("\n")
-    # print("\n")
-    # print("\n")
-    # print("\n")
-    # print("\n")
-    # print("\n")
-    # print("Light Client Update: ")
-    # print("\n")
-    # print("   attested_header: ")
-    # print("        slot: " + str(update.attested_header.slot))
-    # print("        proposer_index: " + str(update.attested_header.proposer_index))
-    # print("        parent_root: " + str(update.attested_header.parent_root))
-    # print("        state_root: " + str(update.attested_header.state_root))
-    # print("        body_root: " + str(update.attested_header.body_root))
-    # print("   next_sync_committee: "  + str(update.next_sync_committee))
-    # print("   next_sync_committee branch: " + str(bytes(update.next_sync_committee_branch)))
-    # print("   finalized_header: ")
-    # print("        slot: " + str(update.finalized_header.slot))
-    # print("        proposer_index: " + str(update.finalized_header.proposer_index))
-    # print("        parent_root: " + str(update.finalized_header.parent_root))
-    # print("        state_root: " + str(update.finalized_header.state_root))
-    # print("        body_root: " + str(update.finalized_header.body_root))
-    
-    # print("   finality_branch: "+ str(bytes(update.finality_branch)))
-    # print("   sync_aggregate: "+ str(update.sync_aggregate))
-    # print("   signature_slot: "+ str(update.signature_slot))
+    #  Error occurs during the transition of periods:    "Exception: incorrect bitvector input: 1 bits, vector length is: 512"
+    if current_sync_period - previous_sync_period == 1:
+      light_client_update = instantiate_sync_period_data(updates.json()) 
+      process_light_client_update(light_client_store, 
+                                  light_client_update, 
+                                  current_slot,
+                                  genesis_validators_root)                   
+    elif current_epoch - previous_epoch == 1:
+      current_finality_update_message = call_api(current_finality_update_url).json()
+      finality_update = instantiate_finality_update_data(current_finality_update_message) 
+      process_light_client_finality_update(light_client_store, 
+                                           finality_update, 
+                                           current_slot, 
+                                           genesis_validators_root) 
+
+    elif current_slot - previous_slot == 1:
+      current_header_update_message = call_api(current_header_update_url).json()                 
+      process_slot_for_light_client_store(light_client_store, current_slot)               
+      optimistic_update = instantiate_optimistic_update_data(current_header_update_message)     
+      process_light_client_optimistic_update(light_client_store,
+                                             optimistic_update,
+                                             current_slot,
+                                             genesis_validators_root) 
+
+
+    previous_sync_period = current_sync_period
+    previous_epoch = current_epoch 
+    previous_slot = current_slot 
+    time.sleep(1)
+  return
+
+
+# ==================
+# Merkle Proof Logic 
+# ==================
+
+def is_valid_merkle_branch(leaf, branch, index, root):
+  node_to_hash = leaf
+  hashed_node = 0
+  path = index_to_path(index)
+  branch_index = 0 
+  # TRAVERSE THE PATH BACKWARDS!
+  for i in range(len(branch), 0, -1):                     
+  # Converts vector[Bytes32] (form of branch in container) to a string of bytes (form my function can manipulate)
+    branch_value = bytes(branch[branch_index])                         
+    if path[i] == '0':
+      hashed_node = hash_pair(node_to_hash, branch_value)
+    if path[i] == '1':
+      hashed_node = hash_pair(branch_value, node_to_hash)
+    if(i == 1):                                
+      if hashed_node == root: 
+        return True
+      else: 
+        return False
+    node_to_hash = hashed_node
+    branch_index += 1

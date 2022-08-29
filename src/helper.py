@@ -1,34 +1,39 @@
+from eth2spec.utils.hash_function import hash
+from math import floor, log2
 import requests
-from merkletreelogic import floorlog2
 from remerkleable.core import View
-from containers import (ALTAIR_FORK_EPOCH,
-                        ALTAIR_FORK_VERSION,
-                        EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-                        FINALIZED_ROOT_INDEX,
-                        GENESIS_FORK_VERSION, 
-                        NEXT_SYNC_COMMITTEE_INDEX, 
-                        SECONDS_PER_SLOT,
-                        SLOTS_PER_EPOCH,
-                        SLOTS_PER_SYNC_PERIOD,
-                        Bytes32,
-                        Domain, 
-                        DomainType,
-                        Epoch, 
-                        Root, 
-                        SSZObject, 
-                        Version,
-                        uint64,
-                        BeaconBlockHeader,
-                        ForkData,
-                        LightClientStore, 
-                        LightClientUpdate, 
-                        SigningData, 
-                        SyncCommittee)
+from containers import ( ALTAIR_FORK_EPOCH,
+                         ALTAIR_FORK_VERSION,
+                         EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+                         FINALIZED_ROOT_INDEX,
+                         GENESIS_FORK_VERSION, 
+                         NEXT_SYNC_COMMITTEE_INDEX, 
+                         SECONDS_PER_SLOT,
+                         SLOTS_PER_EPOCH,
+                         SLOTS_PER_SYNC_PERIOD,
+                         Bytes32,
+                         Domain, 
+                         DomainType,
+                         Epoch, 
+                         Root, 
+                         SSZObject, 
+                         Version,
+                         uint64,
+                         BeaconBlockHeader,
+                         ForkData,
+                         LightClientStore, 
+                         LightClientUpdate, 
+                         SigningData, 
+                         SyncCommittee
+)
 
-# I want to use this call_api throughout all code.  Specify what to do with it in each instance of the call 
+
 def call_api(url):
   response = requests.get(url)
   return response
+
+def floorlog2(x) -> int:
+  return floor(log2(x))
 
 def get_current_epoch(current_time, genesis_time):
   current_epoch = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH)
@@ -41,6 +46,16 @@ def get_current_slot(current_time, genesis_time):
 def get_current_sync_period(current_time, genesis_time):
   current_sync_period = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
   return current_sync_period
+
+def hash_pair(left, right):
+  parent_node = hash(left + right)
+  return parent_node
+
+def index_to_path(index):
+  path = bin(index)
+  if path[:2] == '0b':
+    path = path[2:]
+  return path
 
 def parse_hex_to_bit(hex_string):
   int_representation = int(hex_string, 16)
@@ -55,7 +70,6 @@ def parse_hex_to_byte(hex_string):
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
 
-# Should this return list?
 def parse_list(list):
   for i in range(len(list)):
     list[i] = parse_hex_to_byte(list[i])
@@ -67,10 +81,10 @@ def updates_for_period(sync_period):
   response = call_api(updates_url)
   return response
 
+
 #  ===============================
 #  HELPER FUNCTIONS FROM THE SPEC! 
 #  ===============================
-
 
 def compute_epoch_at_slot(slot_number):
   epoch = slot_number // SLOTS_PER_EPOCH 
@@ -83,7 +97,7 @@ def compute_domain(domain_type: DomainType, fork_version: Version=None, genesis_
     if fork_version is None:
         fork_version = GENESIS_FORK_VERSION
     if genesis_validators_root is None:
-        genesis_validators_root = Root()  # all bytes zero by default
+        genesis_validators_root = Root()  
     fork_data_root = compute_fork_data_root(fork_version, genesis_validators_root)
     return Domain(domain_type + fork_data_root[:28])
 

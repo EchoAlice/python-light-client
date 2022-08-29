@@ -1,3 +1,13 @@
+#  Notes to self:
+#
+#     1.  I'm not using update.signature_slot-   It's not in my class anymore and
+#         everywhere in the spec where it's used, I either got rid of it, or replaced
+#         the signature slot with the attested header slot.  Clara did this, so I figured
+#         I'd try it out.
+
+
+
+
 """                             
       Get block header at slot N in period X = N // 8192
       Ask node for current sync committee + proof of checkpoint root

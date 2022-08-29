@@ -4,7 +4,6 @@ from remerkleable.basic import uint64, byte
 from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
 from typing import Optional
-import time
 
 # This is here instead of helper.py bc sys.path.append() bug...
 def floorlog2(x) -> int:
