@@ -23,8 +23,9 @@ from containers import ( ALTAIR_FORK_EPOCH,
                          ForkData,
                          LightClientStore, 
                          LightClientUpdate, 
-                         SigningData, 
-                         SyncCommittee
+                         SigningData,
+                         SyncAggregate, 
+                         SyncCommittee,
 )
 
 
@@ -80,6 +81,30 @@ def updates_for_period(sync_period):
   updates_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/updates?start_period="+sync_period+"&count=1" 
   response = call_api(updates_url)
   return response
+
+#  ========================
+#  HELPER FUNCTIONS FOR API 
+#  ========================
+def initialize_block_header(header_message):
+  return BeaconBlockHeader (
+    slot =  int(header_message['slot']),
+    proposer_index = int(header_message['proposer_index']),
+    parent_root = parse_hex_to_byte(header_message['parent_root']),
+    state_root = parse_hex_to_byte(header_message['state_root']),
+    body_root = parse_hex_to_byte(header_message['body_root'])
+  )
+
+def initialize_sync_aggregate(aggregate_message):
+  return SyncAggregate(
+    sync_committee_bits = parse_hex_to_bit(aggregate_message['sync_committee_bits']), 
+    sync_committee_signature = parse_hex_to_byte(aggregate_message['sync_committee_signature'])
+  )
+
+def initialize_sync_committee(committee_message):
+  return SyncCommittee(
+    pubkeys = parse_list(committee_message['pubkeys']),
+    aggregate_pubkey = parse_hex_to_byte(committee_message['aggregate_pubkey'])
+  )
 
 
 #  ===============================

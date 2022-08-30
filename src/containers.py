@@ -5,7 +5,7 @@ from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
 from typing import Optional
 
-# This is here instead of helper.py bc sys.path.append() bug...
+# Circular import error if I place this in helper.py
 def floorlog2(x) -> int:
   return floor(log2(x))
 

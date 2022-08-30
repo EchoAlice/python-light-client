@@ -173,7 +173,8 @@ def validate_light_client_update(store: LightClientStore,
             root=update.finalized_header.state_root,                                   
             # root=update.attested_header.state_root,              # <--- spec says this                     
         )
-    
+    # Even after Dade updated logic for proof, my asertion still fails with update's attested_header
+
     # "The next_sync_committee can no longer be considered finalized based
     # on is_finality_update. Instead, waiting until finalized_header is
     # in the attested_header's sync committee period is now necessary."  - Etan-Status PR #2932  
@@ -272,7 +273,7 @@ def process_light_client_finality_update(store: LightClientStore,
         finalized_header=finality_update.finalized_header,
         finality_branch=finality_update.finality_branch,
         sync_aggregate=finality_update.sync_aggregate,
-        signature_slot=finality_update.signature_slot,
+        # signature_slot=finality_update.signature_slot,
     )
     process_light_client_update(store, update, current_slot, genesis_validators_root)
 
@@ -287,10 +288,11 @@ def process_light_client_optimistic_update(store: LightClientStore,
         finalized_header=BeaconBlockHeader(),
         finality_branch=[Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))],
         sync_aggregate=optimistic_update.sync_aggregate,
-        signature_slot=optimistic_update.signature_slot,
+        # signature_slot=optimistic_update.signature_slot,
     )
     
     process_light_client_update(store, update, current_slot, genesis_validators_root)
+
 
 
 #                                           \~~~~~~~~~~~~~~~~~~/
@@ -305,6 +307,7 @@ def process_light_client_optimistic_update(store: LightClientStore,
 
 def sync_to_current_period(light_client_store) -> int:
   light_client_update = LightClientUpdate() 
+  # Am I updating with the correct sync period? 
   sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)     # Which variable should I use to compute the sync period?
   print("sync period: "+str(sync_period))  #  Am I using the correct sync period?  
   while 1>0:

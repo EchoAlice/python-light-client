@@ -1,20 +1,18 @@
 from msilib.schema import Error
 import pytest
 from py_ecc.bls import G2ProofOfPossession as py_ecc_bls
-from specfunctions import View
+from functions import View
 from helper import ( compute_signing_root,
 										 parse_hex_to_bit,
 )
 from containers import (BeaconBlockHeader,
-												SigningData,
-												SSZObject,
-												Domain,
-												Root,
 )
-# Command for testing:   python -m pytest .\src\test\crypto.py
+# Command for testing:   python -m pytest .\src\test.py
 # Tests translated from Clara's project:   snowbridge/parachain/pallets/ethereum-beacon-client/src/tests.rs    
 #
 # Figure out how to use Etan's tests and the vectors he gave me
+
+
 
 # ===========================
 #  BLS_FAST_AGGREGATE_VERIFY
@@ -33,6 +31,9 @@ def test_bls_fast_aggregate_verify_minimal():
 # =========================
 #  Test parse_hex_to_bit()
 # =========================
+
+# What I sent Clara:
+# '0xffffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
 @pytest.fixture
 def hexidecimal():
 	hex_string = 'fff3ffff' 
@@ -40,14 +41,11 @@ def hexidecimal():
 
 @pytest.fixture
 def expected_value():
-	bits = bin(4294180863)
-	if bits[:2] == '0b':
-		bits = bits[2:]
-	return bits
+	string_bits = '11111111111100111111111111111111'
+	return string_bits
 
 def test_parse_hex_to_bit(hexidecimal, expected_value):
 	assert parse_hex_to_bit(hexidecimal) == expected_value
-
 
 # ======================
 #  COMPUTE_SIGNING_ROOT
