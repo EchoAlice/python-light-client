@@ -1,4 +1,8 @@
 import time
+from collections.abc import Sequence
+from eth2spec.utils.hash_function import hash
+from py_ecc.bls import G2ProofOfPossession as py_ecc_bls                       
+from remerkleable.core import View
 from api import ( current_finality_update_url,
                   current_header_update_url,
                   instantiate_sync_period_data,
@@ -36,6 +40,7 @@ from helper import ( call_api,
                      get_current_epoch,
                      get_current_slot,
                      get_current_sync_period,
+                     get_subtree_index, 
                      get_safety_threshold,
                      hash_pair, 
                      index_to_path, 
@@ -45,8 +50,6 @@ from helper import ( call_api,
                      is_sync_committee_update,
                      updates_for_period,
 )
-from py_ecc.bls import G2ProofOfPossession as py_ecc_bls                       
-from remerkleable.core import View
 
 #                                           \~~~~~~~~~~~~~~~~~~/
 #                                            \ ============== /
@@ -64,7 +67,7 @@ def initialize_light_client_store(trusted_block_root: Root, bootstrap: LightClie
     assert is_valid_merkle_branch(
         leaf=View.hash_tree_root(bootstrap.current_sync_committee),
         branch=bootstrap.current_sync_committee_branch,
-        # depth=floorlog2(CURRENT_SYNC_COMMITTEE_INDEX),
+        depth=floorlog2(CURRENT_SYNC_COMMITTEE_INDEX),
         index=CURRENT_SYNC_COMMITTEE_INDEX,
         root=bootstrap.header.state_root,
     )
@@ -153,9 +156,12 @@ def validate_light_client_update(store: LightClientStore,
         assert is_valid_merkle_branch(
             leaf=finalized_root,
             branch=update.finality_branch,
-            index=FINALIZED_ROOT_INDEX,                                
+            depth=floorlog2(FINALIZED_ROOT_INDEX),
+            index=get_subtree_index(FINALIZED_ROOT_INDEX), 
+            # index=FINALIZED_ROOT_INDEX,                                
             root=update.attested_header.state_root,
         )
+    print("first assertion passes") 
     #        ^^^ THIS ASSERTION PASSES!
 
     # Verify that the next_sync_committee, if present, actually is the next sync committee saved in the state of the attested_header
@@ -164,15 +170,19 @@ def validate_light_client_update(store: LightClientStore,
     else:
         if update_attested_period == store_period and is_next_sync_committee_known(store):
             assert update.next_sync_committee == store.next_sync_committee     
-        
+        else: 
+            next_sync_committee_root = View.hash_tree_root(update.next_sync_committee) 
         assert is_valid_merkle_branch(
             #  Next sync committee corresponding to 'attested header'
-            leaf=View.hash_tree_root(update.next_sync_committee),               
+            leaf=next_sync_committee_root,               
             branch=update.next_sync_committee_branch,                   
-            index=NEXT_SYNC_COMMITTEE_INDEX,                        
+            depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX), 
+            index=get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),                        
             root=update.finalized_header.state_root,                                   
             # root=update.attested_header.state_root,              # <--- spec says this                     
         )
+
+
     # Even after Dade updated logic for proof, my asertion still fails with update's attested_header
 
     # "The next_sync_committee can no longer be considered finalized based
@@ -192,6 +202,7 @@ def validate_light_client_update(store: LightClientStore,
 
     fork_version = compute_fork_version(compute_epoch_at_slot(update.attested_header.slot))      # update.signature_slot     
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
+    print("domain: "+str(domain)) 
     signing_root = compute_signing_root(update.attested_header, domain)
 
     assert py_ecc_bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       
@@ -375,24 +386,56 @@ def sync_to_current_updates(light_client_store, light_client_update):
 # ==================
 # Merkle Proof Logic 
 # ==================
+# Try Ethereum's MPL:   I'll have to set up proofs with 5th input
+# def is_valid_merkle_branch(leaf: Bytes32, branch: Sequence[Bytes32], depth: uint64, index: uint64, root: Root) -> bool:
+#     """
+#     Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
+#     """
+#     value = leaf
+#     for i in range(depth):
+#         if index // (2**i) % 2:
+#             value = hash(branch[i] + value)
+#         else:
+#             value = hash(value + branch[i])
+#     return value == root
 
-def is_valid_merkle_branch(leaf, branch, index, root):
-  node_to_hash = leaf
-  hashed_node = 0
-  path = index_to_path(index)
-  branch_index = 0 
-  # TRAVERSE THE PATH BACKWARDS!
-  for i in range(len(branch), 0, -1):                     
-  # Converts vector[Bytes32] (form of branch in container) to a string of bytes (form my function can manipulate)
-    branch_value = bytes(branch[branch_index])                         
-    if path[i] == '0':
-      hashed_node = hash_pair(node_to_hash, branch_value)
-    if path[i] == '1':
-      hashed_node = hash_pair(branch_value, node_to_hash)
-    if(i == 1):                                
-      if hashed_node == root: 
-        return True
-      else: 
-        return False
-    node_to_hash = hashed_node
-    branch_index += 1
+# When does branch go from being a set of bytes to a weird vector
+def is_valid_merkle_branch(leaf: Bytes32, branch: Sequence[Bytes32], depth: uint64, index: uint64, root: Root) -> bool:
+    """
+    Check if ``leaf`` at ``index`` verifies against the Merkle ``root`` and ``branch``.
+    """
+    value = leaf
+    for i in range(depth):
+        branch_value = bytes(branch[i])                   # Maybe let Etan know that you can't hash the remerkleable branch[i] against bytes string 
+        if index // (2**i) % 2:
+            value = hash(branch_value + value)
+        else:
+            value = hash(value + branch_value)
+    return value == root
+
+
+
+
+
+
+# # Mine:
+# def is_valid_merkle_branch(leaf, branch, index, root):
+#   node_to_hash = leaf
+#   hashed_node = 0
+#   path = index_to_path(index)
+#   branch_index = 0 
+#   # TRAVERSE THE PATH BACKWARDS!
+#   for i in range(len(branch), 0, -1):                     
+#   # Converts vector[Bytes32] (form of branch in container) to a string of bytes (form my function can manipulate)
+#     branch_value = bytes(branch[branch_index])                         
+#     if path[i] == '0':
+#       hashed_node = hash_pair(node_to_hash, branch_value)
+#     if path[i] == '1':
+#       hashed_node = hash_pair(branch_value, node_to_hash)
+#     if(i == 1):                                
+#       if hashed_node == root: 
+#         return True
+#       else: 
+#         return False
+#     node_to_hash = hashed_node
+#     branch_index += 1

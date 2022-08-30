@@ -15,6 +15,7 @@ from containers import ( ALTAIR_FORK_EPOCH,
                          Domain, 
                          DomainType,
                          Epoch, 
+                         GeneralizedIndex, 
                          Root, 
                          SSZObject, 
                          Version,
@@ -48,6 +49,9 @@ def get_current_sync_period(current_time, genesis_time):
   current_sync_period = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
   return current_sync_period
 
+def get_subtree_index(generalized_index: GeneralizedIndex) -> uint64:
+    return uint64(generalized_index % 2**(floorlog2(generalized_index)))
+
 def hash_pair(left, right):
   parent_node = hash(left + right)
   return parent_node
@@ -67,7 +71,7 @@ def parse_hex_to_bit(hex_string):
 
 def parse_hex_to_byte(hex_string):
   if hex_string[:2] == '0x':
-    hex_string = hex_string[2:]
+    hex_string = hex_string[2:] 
   byte_string = bytes.fromhex(hex_string)
   return byte_string 
 
