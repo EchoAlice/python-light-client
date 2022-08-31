@@ -1,3 +1,7 @@
+**Install Dependencies**
+Just enter in CLI:
+     pip install -r requirements.txt
+
 **Code is in light-client branch!**
 
 The goal for this MVP light client is to track (in real time) the current head of Ethereum's blockchain in a 
