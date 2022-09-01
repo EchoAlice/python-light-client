@@ -7,16 +7,17 @@ from helper import ( compute_signing_root,
 )
 from containers import (BeaconBlockHeader,
 )
+
 # Command for testing:   python -m pytest .\src\test.py
 # Tests translated from Clara's project:   snowbridge/parachain/pallets/ethereum-beacon-client/src/tests.rs    
-#
 # Figure out how to use Etan's tests and the vectors he gave me
 
 
+# Tests organized in descending order of the verification stack.
 
-# ===========================
-#  BLS_FAST_AGGREGATE_VERIFY
-# ===========================
+# =============================
+#  bls_fast_aggregate_verify()
+# =============================
 def test_bls_fast_aggregate_verify_minimal():
     assert py_ecc_bls.FastAggregateVerify([
 			bytes.fromhex("a73eb991aa22cdb794da6fcde55a427f0a4df5a4a70de23a988b5e5fc8c4d844f66d990273267a54dd21579b7ba6a086"),
@@ -28,28 +29,15 @@ def test_bls_fast_aggregate_verify_minimal():
 		bytes.fromhex("b204e9656cbeb79a9a8e397920fd8e60c5f5d9443f58d42186f773c6ade2bd263e2fe6dbdc47f148f871ed9a00b8ac8b17a40d65c8d02120c00dca77495888366b4ccc10f1c6daa02db6a7516555ca0665bca92a647b5f3a514fa083fdc53b6e")
 		)
 
-# =========================
-#  Test parse_hex_to_bit()
-# =========================
 
-# What I sent Clara:
-# '0xffffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-@pytest.fixture
-def hexidecimal():
-	hex_string = 'fff3ffff' 
-	return hex_string
+# ==============================
+#  1. participant_pubkeys logic
+# ==============================
 
-@pytest.fixture
-def expected_value():
-	string_bits = '11111111111100111111111111111111'
-	return string_bits
 
-def test_parse_hex_to_bit(hexidecimal, expected_value):
-	assert parse_hex_to_bit(hexidecimal) == expected_value
-
-# ======================
-#  COMPUTE_SIGNING_ROOT
-# ======================
+# ===========================
+#  1. compute_signing_root()
+# ===========================
 @pytest.fixture
 def update_attested_header():
     attested_header = BeaconBlockHeader(
@@ -68,3 +56,42 @@ def domain():
 
 def test_compute_signing_root(update_attested_header, domain):
     assert compute_signing_root(update_attested_header, domain) == bytes.fromhex("3ff6e9807da70b2f65cdd58ea1b25ed441a1d589025d2c4091182026d7af08fb") 
+
+
+# =====================
+#  2. compute_domain()
+# =====================
+
+
+
+
+
+
+# ===========================
+#  3. compute_fork_version()
+# ===========================
+
+
+
+
+
+# =======================
+#  3. parse_hex_to_bit()
+# =======================
+
+# What I sent Clara:
+# '0xffffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+@pytest.fixture
+def hexidecimal():
+	hex_string = 'fff3ffff'
+	hex_string_clara = 'ffffffffffffffffffffffffffffffffafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' 
+	return hex_string_clara
+
+@pytest.fixture
+def expected_value():
+	string_bits = '11111111111100111111111111111111'
+	string_bits_clara = '11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111101011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111'
+	return string_bits_clara
+
+def test_parse_hex_to_bit(hexidecimal, expected_value):
+	assert parse_hex_to_bit(hexidecimal) == expected_value

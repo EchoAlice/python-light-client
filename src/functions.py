@@ -141,6 +141,7 @@ def validate_light_client_update(store: LightClientStore,
         update.attested_header.slot > store.finalized_header.slot                                 
         or update_has_next_sync_committee
     )
+    
 
     # Verify that the `finality_branch`, if present, confirms `finalized_header`
     # to match the finalized checkpoint root saved in the state of `attested_header`.
@@ -199,12 +200,12 @@ def validate_light_client_update(store: LightClientStore,
         if bit
     ]
     # Maybe my update.attested_header is wrong?  Check my pubkeys logic too.   
+    # Maybe inputs must be bytes string and not vector bytes?
 
     fork_version = compute_fork_version(compute_epoch_at_slot(update.attested_header.slot))      # update.signature_slot     
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
-    print("domain: "+str(domain)) 
     signing_root = compute_signing_root(update.attested_header, domain)
-
+    
     assert py_ecc_bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       
     print("Validation successful")
 

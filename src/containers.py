@@ -21,6 +21,7 @@ Epoch = uint64
 CommitteeIndex = uint64
 ValidatorIndex	= uint64	
 Gwei =	uint64	
+GeneralizedIndex = uint64                # maybe int?
 Root = Bytes32	
 Hash32	= Bytes32
 Version	= Bytes4
@@ -94,6 +95,7 @@ class LightClientUpdate(Container):
   next_sync_committee_branch: Vector[Bytes32, floorlog2(NEXT_SYNC_COMMITTEE_INDEX)]
   # The finalized beacon block header attested to by Merkle branch
   finalized_header: BeaconBlockHeader
+  # finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
   finality_branch: Vector[Bytes32, floorlog2(FINALIZED_ROOT_INDEX)]
   # Sync committee aggregate signature (sig for previous block)
   sync_aggregate: SyncAggregate

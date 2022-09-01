@@ -1,9 +1,7 @@
 **Install Dependencies**
-Just enter in CLI:
-     pip install -r requirements.txt
+Enter in CLI:    pip install -r requirements.txt
 
-**Code is in light-client branch!**
-
+**Summary**
 The goal for this MVP light client is to track (in real time) the current head of Ethereum's blockchain in a 
 computationally constrained environment.  Having the current block header allows you to verify that specific 
 events/transactions have occured-  all without having to trust a 3rd party node operator to verify said  
