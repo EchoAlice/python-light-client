@@ -3,7 +3,7 @@ Enter in CLI:    pip install -r requirements.txt
 
 To run program: \
       - Working directory is:                            /python-light-client> \
-      - Execute within terminal to run program:          src/main.py \
+      - Execute within terminal to run program:          src/main.py
          
 **Summary**\
 The goal for this MVP light client is to track (in real time) the current head of Ethereum's blockchain in a 
@@ -42,8 +42,8 @@ https://miro.com/app/board/uXjVOjfZyhU=/?share_link_id=526682350813
 
 
 ***Other Resources***\
-Introductory article on light clients:
+Introductory article on light clients: \
 https://mycelium.xyz/research/world-of-light-clients-ethereum
 
-Best resource on the Beacon Chain:
+Best resource on the Beacon Chain: \
 https://eth2book.info/altair/
