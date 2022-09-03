@@ -1,6 +1,10 @@
-**Install Dependencies**
+**Getting Started**
 Enter in CLI:    pip install -r requirements.txt
 
+To run program:
+      - Working directory is:                            /python-light-client>
+      - Execute within terminal to run program:          src/main.py    
+         
 **Summary**
 The goal for this MVP light client is to track (in real time) the current head of Ethereum's blockchain in a 
 computationally constrained environment.  Having the current block header allows you to verify that specific 
@@ -18,12 +22,17 @@ The "Light Ethereum Subprotocol" (LES) is a network which serves said data to li
 architecture. Lodestar has an implementation of LES and is this light client's server.   
 
 
+***My diagrams of Light Clients and the syncing process (Work In Progress):***
+https://miro.com/app/board/uXjVOjfZyhU=/?share_link_id=526682350813
+
+
 **Current Problems**
   - Update's next sync committee is rooted within the finalized header instead of its attested header.
     (This causes problems when the attested header falls ahead into the next sync period before the 
     update's finalized header is there)
-    This bug is on Lodestar's end.  Smart people are on it as we speak!  
-    https://github.com/ChainSafe/lodestar/issues/4426
+    https://github.com/ChainSafe/lodestar/issues/4426  <--   Lodestar fixed the issue, but my next sync committee is
+                                                          still rooted in finalized header, instead of attested header...
+                                                                     Stub for now.  Figure it out.
 
   - py_ecc_bls.FastAggregateVerify() is throwing an assertion error when verifying the update's attested header.
     Basically, the sync committee's signatures aren't verifying that the attested header is legitimate.  This is
@@ -32,6 +41,7 @@ architecture. Lodestar has an implementation of LES and is this light client's s
     a data problem, but I'm not sure where the problem lies. 
 
 
+***Other Resources***
 Introductory article on light clients:
 https://mycelium.xyz/research/world-of-light-clients-ethereum
 
