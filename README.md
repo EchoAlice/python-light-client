@@ -1,11 +1,11 @@
-**Getting Started**
+**Getting Started**\
 Enter in CLI:    pip install -r requirements.txt
 
-To run program:
-      - Working directory is:                            /python-light-client>
-      - Execute within terminal to run program:          src/main.py    
+To run program: \
+      - Working directory is:                            /python-light-client> \
+      - Execute within terminal to run program:          src/main.py \
          
-**Summary**
+**Summary**\
 The goal for this MVP light client is to track (in real time) the current head of Ethereum's blockchain in a 
 computationally constrained environment.  Having the current block header allows you to verify that specific 
 events/transactions have occured-  all without having to trust a 3rd party node operator to verify said  
@@ -41,9 +41,9 @@ https://miro.com/app/board/uXjVOjfZyhU=/?share_link_id=526682350813
     a data problem, but I'm not sure where the problem lies. 
 
 
-***Other Resources***
+***Other Resources***\
 Introductory article on light clients:
 https://mycelium.xyz/research/world-of-light-clients-ethereum
 
-The single best resource I've found related to technical details on the Beacon Chain:
+Best resource on the Beacon Chain:
 https://eth2book.info/altair/
