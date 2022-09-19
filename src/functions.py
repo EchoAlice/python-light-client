@@ -1,14 +1,8 @@
-import time
 from collections.abc import Sequence
 from eth2spec.utils.hash_function import hash
+import milagro_bls_binding
 from py_ecc.bls import G2ProofOfPossession as py_ecc_bls                       
 from remerkleable.core import View
-from api import ( current_finality_update_url,
-                  current_header_update_url,
-                  instantiate_sync_period_data,
-                  instantiate_finality_update_data, 
-                  instantiate_optimistic_update_data, 
-)
 from containers import ( CURRENT_SYNC_COMMITTEE_INDEX,
                          DOMAIN_SYNC_COMMITTEE,
                          FINALIZED_ROOT_INDEX,
@@ -18,6 +12,7 @@ from containers import ( CURRENT_SYNC_COMMITTEE_INDEX,
                          NEXT_SYNC_COMMITTEE_INDEX, 
                          UPDATE_TIMEOUT,
                          Bytes32,
+                         current_time,
                          genesis_validators_root,
                          Root, 
                          Slot,
@@ -28,9 +23,12 @@ from containers import ( CURRENT_SYNC_COMMITTEE_INDEX,
                          LightClientStore, 
                          LightClientUpdate, 
                          SyncCommittee,
+                         time,
                          uint64,
 )
-from helper import ( call_api,
+from helper import ( current_finality_update_url,
+                     current_header_update_url,
+                     call_api,
                      compute_epoch_at_slot,
                      compute_domain,
                      compute_fork_version,
@@ -44,6 +42,9 @@ from helper import ( call_api,
                      get_safety_threshold,
                      hash_pair, 
                      index_to_path, 
+                     initialize_light_client_update,
+                     initialize_light_client_finality_update, 
+                     initialize_light_client_optimistic_update, 
                      is_better_update,
                      is_finality_update,
                      is_next_sync_committee_known,
@@ -162,7 +163,7 @@ def validate_light_client_update(store: LightClientStore,
             # index=FINALIZED_ROOT_INDEX,                                
             root=update.attested_header.state_root,
         )
-    print("first assertion passes") 
+    print("Finalized root is rooted in Attested header") 
     #        ^^^ THIS ASSERTION PASSES!
 
     # Verify that the next_sync_committee, if present, actually is the next sync committee saved in the state of the attested_header
@@ -183,7 +184,6 @@ def validate_light_client_update(store: LightClientStore,
             # root=update.attested_header.state_root,              # <--- spec says this                     
         )
 
-
     # Even after Dade updated logic for proof, my asertion still fails with update's attested_header
 
     # "The next_sync_committee can no longer be considered finalized based
@@ -195,18 +195,21 @@ def validate_light_client_update(store: LightClientStore,
         sync_committee = store.current_sync_committee
     else:
         sync_committee = store.next_sync_committee
+    # participant_pubkeys = [                                                                                   
+    #     bytes(pubkey) for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
+    #     if bit
+    # ]
     participant_pubkeys = [                                                                                   
-        pubkey for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
+        bytes(pubkey) for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
         if bit
     ]
-    # Maybe my update.attested_header is wrong?  Check my pubkeys logic too.   
-    # Maybe inputs must be bytes string and not vector bytes?
 
-    fork_version = compute_fork_version(compute_epoch_at_slot(update.attested_header.slot))      # update.signature_slot     
+    fork_version = compute_fork_version(compute_epoch_at_slot(update.attested_header.slot))           
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
     signing_root = compute_signing_root(update.attested_header, domain)
     
-    assert py_ecc_bls.FastAggregateVerify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)       
+    # assert py_ecc_bls.FastAggregateVerify(participant_pubkeys, signing_root, bytes(sync_aggregate.sync_committee_signature))       
+    assert milagro_bls_binding.FastAggregateVerify(participant_pubkeys, signing_root, bytes(sync_aggregate.sync_committee_signature))       
     print("Validation successful")
 
 
@@ -285,7 +288,6 @@ def process_light_client_finality_update(store: LightClientStore,
         finalized_header=finality_update.finalized_header,
         finality_branch=finality_update.finality_branch,
         sync_aggregate=finality_update.sync_aggregate,
-        # signature_slot=finality_update.signature_slot,
     )
     process_light_client_update(store, update, current_slot, genesis_validators_root)
 
@@ -300,7 +302,6 @@ def process_light_client_optimistic_update(store: LightClientStore,
         finalized_header=BeaconBlockHeader(),
         finality_branch=[Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))],
         sync_aggregate=optimistic_update.sync_aggregate,
-        # signature_slot=optimistic_update.signature_slot,
     )
     
     process_light_client_update(store, update, current_slot, genesis_validators_root)
@@ -319,18 +320,14 @@ def process_light_client_optimistic_update(store: LightClientStore,
 
 def sync_to_current_period(light_client_store) -> int:
   light_client_update = LightClientUpdate() 
-  # Am I updating with the correct sync period? 
-  sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)     # Which variable should I use to compute the sync period?
-  print("sync period: "+str(sync_period))  #  Am I using the correct sync period?  
-  while 1>0:
-    current_time = uint64(int(time.time()))
+  sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)
+  while True:
     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
     updates = updates_for_period(sync_period)
- 
-    # This should be turned into its own function and reused inside of sync_to_current_updates 
+
+    # Status code doesn't equal 200 when there are no more updates, but I should keep track of the current period on my own clock 
     if updates.status_code == 200:
-      light_client_update = instantiate_sync_period_data(updates.json())
-      #  This function is the antithesis of what the project is converging towards
+      light_client_update = initialize_light_client_update(updates.json())
       process_light_client_update(light_client_store, 
                                   light_client_update, 
                                   current_slot,
@@ -345,23 +342,23 @@ def sync_to_current_updates(light_client_store, light_client_update):
   previous_sync_period = 0 
   previous_epoch = 0
   previous_slot = 0
-  while 1>0:
+  while True:
     current_time = uint64(int(time.time()))                           
     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
     current_epoch = get_current_epoch(current_time, MIN_GENESIS_TIME)
     current_sync_period = get_current_sync_period(current_time, MIN_GENESIS_TIME) 
     updates = updates_for_period(current_sync_period)
-    
+
     #  Error occurs during the transition of periods:    "Exception: incorrect bitvector input: 1 bits, vector length is: 512"
     if current_sync_period - previous_sync_period == 1:
-      light_client_update = instantiate_sync_period_data(updates.json()) 
+      light_client_update = initialize_light_client_update(updates.json()) 
       process_light_client_update(light_client_store, 
                                   light_client_update, 
                                   current_slot,
                                   genesis_validators_root)                   
     elif current_epoch - previous_epoch == 1:
       current_finality_update_message = call_api(current_finality_update_url).json()
-      finality_update = instantiate_finality_update_data(current_finality_update_message) 
+      finality_update = initialize_light_client_finality_update(current_finality_update_message) 
       process_light_client_finality_update(light_client_store, 
                                            finality_update, 
                                            current_slot, 
@@ -370,7 +367,7 @@ def sync_to_current_updates(light_client_store, light_client_update):
     elif current_slot - previous_slot == 1:
       current_header_update_message = call_api(current_header_update_url).json()                 
       process_slot_for_light_client_store(light_client_store, current_slot)               
-      optimistic_update = instantiate_optimistic_update_data(current_header_update_message)     
+      optimistic_update = initialize_light_client_optimistic_update(current_header_update_message)     
       process_light_client_optimistic_update(light_client_store,
                                              optimistic_update,
                                              current_slot,
