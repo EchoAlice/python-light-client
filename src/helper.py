@@ -7,6 +7,7 @@ from containers import ( ALTAIR_FORK_EPOCH,
                          EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
                          FINALIZED_ROOT_INDEX,
                          GENESIS_FORK_VERSION, 
+                         MIN_GENESIS_TIME,
                          NEXT_SYNC_COMMITTEE_INDEX, 
                          SECONDS_PER_SLOT,
                          SLOTS_PER_EPOCH,
@@ -22,31 +23,39 @@ from containers import ( ALTAIR_FORK_EPOCH,
                          uint64,
                          BeaconBlockHeader,
                          ForkData,
-                         LightClientStore, 
+                         LightClientBootstrap,
+                         LightClientFinalityUpdate,
+                         LightClientOptimisticUpdate, 
+                         LightClientStore,
                          LightClientUpdate, 
                          SigningData,
                          SyncAggregate, 
                          SyncCommittee,
 )
 
-
 def call_api(url):
-  response = requests.get(url)
-  return response
+  try: 
+    response = requests.get(url)
+    if response.ok: 
+      return response
+    else:
+      return None
+  except requests.exceptions.Timeout:
+    return 'Bad Response'
 
 def floorlog2(x) -> int:
   return floor(log2(x))
 
-def get_current_epoch(current_time, genesis_time):
-  current_epoch = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH)
+def get_current_epoch(current_time, MIN_GENESIS_TIME):
+  current_epoch = (current_time - MIN_GENESIS_TIME) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH)
   return current_epoch
 
-def get_current_slot(current_time, genesis_time):
-  current_slot = (current_time - genesis_time) // SECONDS_PER_SLOT
+def get_current_slot(current_time, MIN_GENESIS_TIME):
+  current_slot = (current_time - MIN_GENESIS_TIME) // SECONDS_PER_SLOT
   return current_slot
 
-def get_current_sync_period(current_time, genesis_time):
-  current_sync_period = (current_time - genesis_time) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
+def get_current_sync_period(current_time, MIN_GENESIS_TIME):
+  current_sync_period = (current_time - MIN_GENESIS_TIME) // (SECONDS_PER_SLOT * SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
   return current_sync_period
 
 def get_subtree_index(generalized_index: GeneralizedIndex) -> uint64:
@@ -86,9 +95,63 @@ def updates_for_period(sync_period):
   response = call_api(updates_url)
   return response
 
-#  ========================
-#  HELPER FUNCTIONS FOR API 
-#  ========================
+# Move bootstrap here
+def initialize_bootstrap_object(bootstrap_message):
+  return LightClientBootstrap(
+    header= initialize_block_header(bootstrap_message['data']['header']),
+    current_sync_committee= initialize_sync_committee(bootstrap_message['data']['current_sync_committee']),
+    current_sync_committee_branch=  parse_list(bootstrap_message['data']['current_sync_committee_branch'])
+)
+
+# ======
+#  URLs
+# ======
+checkpoint_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/states/finalized/finality_checkpoints"
+checkpoint = call_api(checkpoint_url)
+checkpoint_message = checkpoint.json()
+
+bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0x705db40cc768f3d3b515fa36fde616f7a934c22d40e08eb2e2fa7bdd59c086ff" 
+# bootstrap_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/bootstrap/0xc55890e1754b77059cea7e98cec96faa0c860a260991831cdeb23c063a974adf" 
+current_finality_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/finality_update/" 
+current_header_update_url = "https://lodestar-mainnet.chainsafe.io/eth/v1/beacon/light_client/optimistic_update/" 
+
+finalized_checkpoint_root = checkpoint_message['data']['finalized']['root']    # Print to get the hex encoded bootstrap block root
+trusted_block_root =  parse_hex_to_byte("0x705db40cc768f3d3b515fa36fde616f7a934c22d40e08eb2e2fa7bdd59c086ff")  # trusted_block_root == finalized_checkpoint_root
+# trusted_block_root =  parse_hex_to_byte("0xc55890e1754b77059cea7e98cec96faa0c860a260991831cdeb23c063a974adf")  # trusted_block_root == finalized_checkpoint_root
+
+#  ================
+#  UPDATE FUNCTIONS
+#  ================
+def initialize_light_client_update(update_message):
+  return LightClientUpdate(
+    attested_header = initialize_block_header(update_message['data'][0]['attested_header']),
+    next_sync_committee = initialize_sync_committee(update_message['data'][0]['next_sync_committee']),
+    next_sync_committee_branch = parse_list(update_message['data'][0]['next_sync_committee_branch']),
+    finalized_header = initialize_block_header(update_message['data'][0]['finalized_header']),
+    finality_branch = parse_list(update_message['data'][0]['finality_branch']),
+    sync_aggregate = initialize_sync_aggregate(update_message['data'][0]['sync_aggregate']),
+  )
+    # sync aggregate - A record of which validators in the current sync committee voted for the chain head in the previous slot.               <---- This statement could be interpretted in different ways...
+    # Contains the sync committee's bitfield and signature required for verifying the attested header.                                   @ben_eddington
+
+
+def initialize_light_client_finality_update(update_message):
+  return LightClientFinalityUpdate (
+    attested_header = initialize_block_header(update_message['data']['attested_header']),
+    finalized_header = initialize_block_header(update_message['data']['finalized_header']),
+    finality_branch = parse_list(update_message['data']['finality_branch']),
+    sync_aggregate = initialize_sync_aggregate(update_message['data']['sync_aggregate']),
+  )
+
+def initialize_light_client_optimistic_update(update_message):
+  return LightClientOptimisticUpdate (
+    attested_header = initialize_block_header(update_message['data']['attested_header']), 
+    sync_aggregate = initialize_sync_aggregate(update_message['data']['sync_aggregate']), 
+  )
+
+#  ====================================
+#  HELPER FUNCTIONS FOR DATA STRUCTURES 
+#  ====================================
 def initialize_block_header(header_message):
   return BeaconBlockHeader (
     slot =  int(header_message['slot']),
@@ -114,7 +177,6 @@ def initialize_sync_committee(committee_message):
 #  ===============================
 #  HELPER FUNCTIONS FROM THE SPEC! 
 #  ===============================
-
 def compute_epoch_at_slot(slot_number):
   epoch = slot_number // SLOTS_PER_EPOCH 
   return epoch
