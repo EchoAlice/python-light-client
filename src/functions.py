@@ -163,7 +163,6 @@ def validate_light_client_update(store: LightClientStore,
             # index=FINALIZED_ROOT_INDEX,                                
             root=update.attested_header.state_root,
         )
-    print("Finalized root is rooted in Attested header") 
     #        ^^^ THIS ASSERTION PASSES!
 
     # Verify that the next_sync_committee, if present, actually is the next sync committee saved in the state of the attested_header
@@ -172,18 +171,18 @@ def validate_light_client_update(store: LightClientStore,
     else:
         if update_attested_period == store_period and is_next_sync_committee_known(store):
             assert update.next_sync_committee == store.next_sync_committee     
-        else: 
-            next_sync_committee_root = View.hash_tree_root(update.next_sync_committee) 
+        # else: 
+        #     next_sync_committee_root = View.hash_tree_root(update.next_sync_committee) 
         assert is_valid_merkle_branch(
             #  Next sync committee corresponding to 'attested header'
-            leaf=next_sync_committee_root,               
+            # leaf=next_sync_committee_root,               
+            leaf=View.hash_tree_root(update.next_sync_committee),               
             branch=update.next_sync_committee_branch,                   
             depth=floorlog2(NEXT_SYNC_COMMITTEE_INDEX), 
             index=get_subtree_index(NEXT_SYNC_COMMITTEE_INDEX),                        
             root=update.finalized_header.state_root,                                   
             # root=update.attested_header.state_root,              # <--- spec says this                     
         )
-
     # Even after Dade updated logic for proof, my asertion still fails with update's attested_header
 
     # "The next_sync_committee can no longer be considered finalized based
@@ -195,10 +194,6 @@ def validate_light_client_update(store: LightClientStore,
         sync_committee = store.current_sync_committee
     else:
         sync_committee = store.next_sync_committee
-    # participant_pubkeys = [                                                                                   
-    #     bytes(pubkey) for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
-    #     if bit
-    # ]
     participant_pubkeys = [                                                                                   
         bytes(pubkey) for (bit, pubkey) in zip(sync_aggregate.sync_committee_bits, sync_committee.pubkeys)
         if bit
@@ -207,7 +202,10 @@ def validate_light_client_update(store: LightClientStore,
     fork_version = compute_fork_version(compute_epoch_at_slot(update.attested_header.slot))           
     domain = compute_domain(DOMAIN_SYNC_COMMITTEE, fork_version, genesis_validators_root)        
     signing_root = compute_signing_root(update.attested_header, domain)
-    
+
+    # print('signing_root: '+str(signing_root))
+    # print('sync_agg.sync_comm_sig: '+str(type(sync_aggregate.sync_committee_signature)))
+
     # assert py_ecc_bls.FastAggregateVerify(participant_pubkeys, signing_root, bytes(sync_aggregate.sync_committee_signature))       
     assert milagro_bls_binding.FastAggregateVerify(participant_pubkeys, signing_root, bytes(sync_aggregate.sync_committee_signature))       
     print("Validation successful")
@@ -234,7 +232,6 @@ def process_light_client_update(store: LightClientStore,
     validate_light_client_update(store, update, current_slot, genesis_validators_root)
 
     sync_committee_bits = update.sync_aggregate.sync_committee_bits
-
     # Update the best update in case we have to force-update to it if the timeout elapses
     if (
         store.best_valid_update is None
@@ -317,26 +314,27 @@ def process_light_client_optimistic_update(store: LightClientStore,
 # ====================
 # Sync Data Structures
 # ====================
+# def sync_to_current_period(light_client_store) -> int:
+#   sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)
+  
+#   while True:
+#     current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
+#     updates = updates_for_period(sync_period)
 
-def sync_to_current_period(light_client_store) -> int:
-  light_client_update = LightClientUpdate() 
-  sync_period = compute_sync_committee_period_at_slot(light_client_store.finalized_header.slot)
-  while True:
-    current_slot = get_current_slot(current_time, MIN_GENESIS_TIME)
-    updates = updates_for_period(sync_period)
+#     # Status code doesn't equal 200 when there are no more updates, but I should keep track of the current period on my own clock 
+#     if updates.status_code == 200:
+#       light_client_update = initialize_light_client_update(updates.json())
+#       process_light_client_update(light_client_store, 
+#                                   light_client_update, 
+#                                   current_slot,
+#                                   genesis_validators_root)                   
+#       time.sleep(1)
+#       sync_period += 1
+#     else:
+#       sync_period = sync_period - 1 
+#       return light_client_update
 
-    # Status code doesn't equal 200 when there are no more updates, but I should keep track of the current period on my own clock 
-    if updates.status_code == 200:
-      light_client_update = initialize_light_client_update(updates.json())
-      process_light_client_update(light_client_store, 
-                                  light_client_update, 
-                                  current_slot,
-                                  genesis_validators_root)                   
-      time.sleep(1)
-      sync_period += 1
-    else:
-      sync_period = sync_period - 1 
-      return light_client_update
+
 
 def sync_to_current_updates(light_client_store, light_client_update):          
   previous_sync_period = 0 
