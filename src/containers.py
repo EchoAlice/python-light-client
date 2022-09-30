@@ -4,6 +4,7 @@ from remerkleable.basic import uint64, byte
 from remerkleable.bitfields import Bitvector
 from remerkleable.complex import Container, Vector
 from typing import Optional
+import time
 
 # Circular import error if I place this in helper.py
 def floorlog2(x) -> int:
@@ -31,6 +32,7 @@ DomainType = Bytes4
 Domain = Bytes32
 SSZObject = Container                                                  #  Is an SSZObject just a Container class?
 genesis_validators_root = b'K6=\xb9N(a \xd7n\xb9\x054\x0f\xddNT\xbf\xe9\xf0k\xf3?\xf6\xcfZ\xd2\x7fQ\x1b\xfe\x95' 
+current_time = uint64(int(time.time()))
 
 # Constants
 ALTAIR_FORK_EPOCH =	Epoch(74240)
