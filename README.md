@@ -34,11 +34,14 @@ https://miro.com/app/board/uXjVOjfZyhU=/?share_link_id=526682350813
                                                           still rooted in finalized header, instead of attested header...
                                                                      Stub for now.  Figure it out.
 
-  - py_ecc_bls.FastAggregateVerify() is throwing an assertion error when verifying the update's attested header.
-    Basically, the sync committee's signatures aren't verifying that the attested header is legitimate.  This is
-    a problem as this is the whole point of the light client.
-    Within src/test.py you can find a test that shows the function itself works properly... So it must be
-    a data problem, but I'm not sure where the problem lies. 
+  - Solved the py_ecc.bls library bug (I was passing in an SSZ byte array into the signature verification function instead 
+    of passing in bytes).  Figured it out by using the Milagro bls library.  It threw an error telling me to use bytes!
+    But now I've got another mysterious assertion error that comes up after verifying 3 periods worth of committee changes.
+
+
+**To Do**
+  - Figure out another assertion error with bls library
+  - Figure out logic for syncing to the current block and place it inside of main.py
 
 
 ***Other Resources***\
