@@ -37,7 +37,7 @@ if __name__ == "__main__":
   assert bootstrap.status_code == 200 
   bootstrap_object = initialize_bootstrap_object(bootstrap.json())
   light_client_store = initialize_light_client_store(trusted_block_root, bootstrap_object)
-
+  print(type(light_client_store.finalized_header.state_root))  
 
 
   # ============================================================ 
@@ -53,9 +53,6 @@ if __name__ == "__main__":
     updates = updates_for_period(store_period)
     light_client_update = initialize_light_client_update(updates.json())
 
-  # This was the old way
-  # light_client_update = sync_to_current_period(light_client_store)
-  
   # Sync to current period logic is out here now.
   while store_period < current_period:
     # Define within while loop to continually get updates on the current time
