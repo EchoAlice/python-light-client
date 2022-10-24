@@ -18,12 +18,14 @@ architecture. Lodestar has an implementation of LES and is this light client's s
 While I love Lodestar, the client/server model for light clients isn't ideal.  Decentralizing the stack is always
 the goal.  The Portal Network is a set of peer to peer networks that, among other things, is attempting to host 
 the data needed to allow light clients to opperate. 
+\
 
 **The refined goal for this light client is to track the current head of the Beacon chain via the Portal Netork.**
+\
 
-Starting points for updated goal:
-https://github.com/ethereum/portal-network-specs/pull/166
-https://github.com/ogenev/portal-network-specs/tree/beacon-lc-network-specs/beacon-chain
+Starting points for updated goal: \
+https://github.com/ethereum/portal-network-specs/pull/166 \
+https://github.com/ogenev/portal-network-specs/tree/beacon-lc-network-specs/beacon-chain \
 
 
 **Steps for Light Client:**
