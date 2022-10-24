@@ -38,9 +38,9 @@ https://github.com/ogenev/portal-network-specs/tree/beacon-lc-network-specs/beac
 **Current Problems**
   - Update's next sync committee is rooted within the finalized header instead of its attested header.
     This causes problems when the attested header falls ahead into the next sync period before the 
-    update's finalized header is there
-     Lodestar fixed the issue, but my next sync committee is still rooted in finalized header, 
-     instead of attested header  --> https://github.com/ChainSafe/lodestar/issues/4426
+    update's finalized header is there.
+    Lodestar fixed the issue, but my next sync committee is still rooted in finalized header, 
+    instead of attested header  --> https://github.com/ChainSafe/lodestar/issues/4426
 
   - Solved the py_ecc.bls library bug (I was passing in an SSZ byte array into the signature verification function instead 
     of passing in bytes).  Figured it out by using the Milagro bls library.  It threw an error telling me to use bytes!
@@ -48,7 +48,7 @@ https://github.com/ogenev/portal-network-specs/tree/beacon-lc-network-specs/beac
 
 
 **To Do**
-  - Track down another assertion error with bls library
+  - Track down assertion error with bls library
   - Figure out logic for syncing to the current block and place it inside of main.py
   - Transition from Lodestar to Portal Network
 
