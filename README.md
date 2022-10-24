@@ -19,7 +19,7 @@ While I love Lodestar, the client/server model for light clients isn't ideal.  D
 the goal.  The Portal Network is a set of peer to peer networks that, among other things, is attempting to host 
 the data needed to allow light clients to opperate. 
 
-The refined goal for this light client is to track the current head of the Beacon chain via the Portal Netork.
+**The refined goal for this light client is to track the current head of the Beacon chain via the Portal Netork.**
 
 Starting points for updated goal:
 https://github.com/ethereum/portal-network-specs/pull/166
